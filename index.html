@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales scoreboard · Every sale matters</title>
+<style>
+  :root {
+    --text: #1a1a1a; --muted: #5f6368; --faint: #9aa0a6;
+    --border: #e1e3e6; --bg-muted: #f1f3f4; --bg-raised: #ffffff;
+    --blue: #1a73e8; --green: #188038; --red: #d93025;
+    --radius: 10px; --radius-full: 999px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--text); background: #fafbfc; line-height: 1.4;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  .num { font-variant-numeric: tabular-nums; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .title { font-size: 20px; font-weight: 600; }
+  .meta { font-size: 12px; color: var(--faint); }
+  .live { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--green); margin-inline-end: 6px; vertical-align: middle; }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-block: 16px; }
+  select, .seg button { font: inherit; }
+  select { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-raised); max-width: 190px; }
+  .seg { display: inline-flex; gap: 2px; background: var(--bg-muted); border-radius: var(--radius-full); padding: 2px; }
+  .seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: var(--radius-full); font-size: 13px; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--bg-raised); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+  .hero { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-block-start: 8px; }
+  .big { font-size: 56px; font-weight: 600; line-height: 1.05; }
+  .delta { font-size: 15px; font-weight: 600; }
+  .delta.up { color: var(--green); } .delta.down { color: var(--red); }
+  .sub { font-size: 13px; color: var(--muted); max-width: 420px; }
+
+  .bar { height: 8px; border-radius: var(--radius-full); background: var(--bg-muted); overflow: hidden; margin-block: 12px 4px; }
+  .bar > div { height: 100%; border-radius: var(--radius-full); background: var(--blue); }
+  .barlabel { font-size: 12px; color: var(--faint); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-block-start: 20px; }
+  .cell { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--bg-raised); }
+  .cell .k { font-size: 12px; color: var(--faint); }
+  .cell .v { font-size: 22px; font-weight: 600; margin-block-start: 2px; }
+
+  .panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-block-start: 20px; background: var(--bg-raised); }
+  .panel h3 { margin: 0 0 8px; font-size: 14px; }
+  .line { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding-block: 3px; }
+  .line .lab { color: var(--muted); }
+  .line .val { font-weight: 600; }
+  .paid { font-size: 11px; padding: 1px 8px; border-radius: var(--radius-full); font-weight: 500; }
+  .paid.yes { color: var(--green); background: #e6f4ea; }
+  .paid.no { color: var(--faint); background: var(--bg-muted); }
+
+  .tablewrap { margin-block-start: 12px; max-height: 480px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-raised); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 12px; border-block-end: 1px solid var(--border); }
+  th { position: sticky; top: 0; background: var(--bg-raised); font-size: 12px; color: var(--faint); font-weight: 600; z-index: 1; }
+  td.r, th.r { text-align: end; }
+  tr.me td { background: #e8f0fe; }
+  .chip { font-size: 11px; color: var(--faint); }
+  .pct.up { color: var(--green); } .pct.down { color: var(--red); }
+
+  .college { margin-block: 16px; }
+  .college .top { display: flex; justify-content: space-between; font-size: 14px; margin-block-end: 6px; }
+  .college .top .n { font-weight: 600; }
+  .college .top .p { color: var(--muted); }
+
+  footer { margin-block-start: 40px; font-size: 12px; color: var(--faint); border-block-start: 1px solid var(--border); padding-block-start: 16px; }
+  [hidden] { display: none !important; }
+  .loading { color: var(--faint); font-size: 14px; padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title">Every sale matters</div>
+    <div class="meta"><span class="live"></span><span id="meta">Loading…</span></div>
+  </div>
+
+  <div class="controls">
+    <select id="person" aria-label="Choose a name"></select>
+    <div class="seg" id="periodSeg" aria-label="Period"></div>
+    <div class="seg" id="viewSeg" aria-label="View"></div>
+  </div>
+
+  <div id="loading" class="loading">Reading the registration sheets…</div>
+
+  <div id="content" hidden>
+    <section id="viewMe">
+      <div class="hero">
+        <div class="big num" id="heroCount">–</div>
+        <div>
+          <div class="delta num" id="heroDelta"></div>
+          <div class="sub" id="heroSub"></div>
+        </div>
+      </div>
+      <div class="bar"><div id="bestBar" style="width:0%"></div></div>
+      <div class="barlabel" id="bestLabel"></div>
+      <div class="grid" id="statGrid"></div>
+      <div class="panel">
+        <h3>Weekly incentives (this week)</h3>
+        <div id="incLines"></div>
+      </div>
+    </section>
+
+    <section id="viewLeague" hidden>
+      <div class="sub" id="leagueSub"></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>Person</th><th>College</th><th class="r">Now</th><th class="r">Aug pace</th><th class="r">±</th></tr></thead>
+          <tbody id="leagueBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="viewColleges" hidden>
+      <div class="sub" id="collegeSub"></div>
+      <div id="collegeList"></div>
+    </section>
+  </div>
+
+  <footer>
+    Registrations count when a row names the salesperson plus a student name or CRM ID; “Cancelled” rows are excluded.
+    August pace = the person’s August daily average × recorded days in the period. Weekly incentives follow the
+    team’s incentive sheet: debit-order levels from 25 up, plus cash incentives per bracket. Updates hourly during
+    work hours. Source: the team’s registration and incentive Google Sheets.
+  </footer>
+</div>
+
+<script id="embedded-data" type="application/json">{"generated_at": "2026-10-04T21:47:20", "latest_day": "2026-09-30", "month_recorded_days": 21, "aug_recorded_days": 20, "people": [{"name": "Duduzile", "college": "Bellview Inst.", "aug_per_day": 2.45, "today": 7, "yesterday": 1, "week": 16, "month": 118, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 14, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 11}}, {"name": "Lesego", "college": "Bellview Inst.", "aug_per_day": 1.6, "today": 3, "yesterday": 5, "week": 13, "month": 59, "best_day": 6, "prev_best": 6, "incentive": {"debit_orders": 12, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 13}}, {"name": "Andre", "college": "Skills Academy", "aug_per_day": 2.6, "today": 2, "yesterday": 4, "week": 11, "month": 69, "best_day": 7, "prev_best": 7, "incentive": {"debit_orders": 8, "enrolment_incentive": 0, "cash_collected": 4245.0, "cash_incentive": 100, "paid": false, "total": 100, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 17}}, {"name": "Glynis", "college": "Matric College", "aug_per_day": 1.9, "today": 0, "yesterday": 0, "week": 0, "month": 29, "best_day": 6, "prev_best": 6, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Natasha", "college": "Matric College", "aug_per_day": 4.15, "today": 7, "yesterday": 3, "week": 15, "month": 105, "best_day": 10, "prev_best": 10, "incentive": {"debit_orders": 15, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 10}}, {"name": "Leigh", "college": "Skills Academy", "aug_per_day": 1.65, "today": 0, "yesterday": 1, "week": 2, "month": 36, "best_day": 4, "prev_best": 4, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 11068.34, "cash_incentive": 250, "paid": false, "total": 250, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Prince", "college": "Skills Academy", "aug_per_day": 3.9, "today": 3, "yesterday": 1, "week": 6, "month": 66, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 4, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 21}}, {"name": "Nomfundo", "college": "Matric College", "aug_per_day": 3.55, "today": 0, "yesterday": 0, "week": 0, "month": 43, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Liza", "college": "Skills Academy", "aug_per_day": 6.5, "today": 5, "yesterday": 5, "week": 10, "month": 132, "best_day": 14, "prev_best": 14, "incentive": {"debit_orders": 9, "enrolment_incentive": 0, "cash_collected": 3615.0, "cash_incentive": 100, "paid": false, "total": 100, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 16}}, {"name": "Christinah", "college": "Bellview Inst.", "aug_per_day": 4.5, "today": 5, "yesterday": 2, "week": 15, "month": 95, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 15, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 10}}, {"name": "Tanya", "college": "Bellview Inst.", "aug_per_day": 6.1, "today": 6, "yesterday": 7, "week": 22, "month": 144, "best_day": 15, "prev_best": 15, "incentive": {"debit_orders": 23, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 2}}, {"name": "Kenneth", "college": "Skills Academy", "aug_per_day": 8.35, "today": 9, "yesterday": 9, "week": 27, "month": 189, "best_day": 13, "prev_best": 13, "incentive": {"debit_orders": 25, "enrolment_incentive": 400, "cash_collected": 2150.0, "cash_incentive": 50, "paid": false, "total": 450, "next_level_at": 30, "next_level_amount": 550, "to_next_level": 5}}, {"name": "Mpho", "college": "Bellview Inst.", "aug_per_day": 4.45, "today": 5, "yesterday": 4, "week": 13, "month": 85, "best_day": 10, "prev_best": 10, "incentive": {"debit_orders": 12, "enrolment_incentive": 0, "cash_collected": 1971.0, "cash_incentive": 100, "paid": false, "total": 100, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 13}}, {"name": "Debbie", "college": "Skills Academy", "aug_per_day": 2.8, "today": 2, "yesterday": 3, "week": 7, "month": 51, "best_day": 6, "prev_best": 6, "incentive": {"debit_orders": 3, "enrolment_incentive": 0, "cash_collected": 8634.0, "cash_incentive": 200, "paid": false, "total": 200, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 22}}, {"name": "Pheletso", "college": "Skills Academy", "aug_per_day": 4.95, "today": 1, "yesterday": 4, "week": 8, "month": 98, "best_day": 9, "prev_best": 9, "incentive": {"debit_orders": 8, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 17}}, {"name": "Keeletse", "college": "Bellview Inst.", "aug_per_day": 3.45, "today": 1, "yesterday": 5, "week": 10, "month": 64, "best_day": 5, "prev_best": 5, "incentive": {"debit_orders": 10, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 15}}, {"name": "Clarence", "college": "Skills Academy", "aug_per_day": 8.15, "today": 7, "yesterday": 6, "week": 16, "month": 147, "best_day": 15, "prev_best": 15, "incentive": {"debit_orders": 16, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 9}}, {"name": "Mary", "college": "Matric College", "aug_per_day": 3.8, "today": 0, "yesterday": 0, "week": 0, "month": 39, "best_day": 6, "prev_best": 6, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Clauday", "college": "Matric College", "aug_per_day": 6.2, "today": 6, "yesterday": 5, "week": 15, "month": 100, "best_day": 10, "prev_best": 10, "incentive": {"debit_orders": 13, "enrolment_incentive": 0, "cash_collected": 10292.0, "cash_incentive": 300, "paid": false, "total": 300, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 12}}, {"name": "Palesa", "college": "Matric College", "aug_per_day": 5.3, "today": 3, "yesterday": 6, "week": 19, "month": 108, "best_day": 10, "prev_best": 10, "incentive": {"debit_orders": 19, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 6}}, {"name": "ChristaB", "college": "Bellview Inst.", "aug_per_day": 4.9, "today": 0, "yesterday": 0, "week": 0, "month": 55, "best_day": 9, "prev_best": 9, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Willem", "college": "Skills Academy", "aug_per_day": 2.4, "today": 0, "yesterday": 0, "week": 2, "month": 36, "best_day": 4, "prev_best": 4, "incentive": {"debit_orders": 2, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 23}}, {"name": "Nompumelelo", "college": "Bellview Inst.", "aug_per_day": 5.2, "today": 6, "yesterday": 1, "week": 15, "month": 106, "best_day": 12, "prev_best": 12, "incentive": {"debit_orders": 15, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 10}}, {"name": "Grace", "college": "Skills Academy", "aug_per_day": 6.05, "today": 7, "yesterday": 5, "week": 14, "month": 116, "best_day": 9, "prev_best": 9, "incentive": {"debit_orders": 14, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 11}}, {"name": "Vinolia", "college": "Skills Academy", "aug_per_day": 5.05, "today": 4, "yesterday": 8, "week": 14, "month": 100, "best_day": 13, "prev_best": 13, "incentive": {"debit_orders": 14, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 11}}, {"name": "Nthabiseng", "college": "Skills Academy", "aug_per_day": 6.5, "today": 4, "yesterday": 0, "week": 9, "month": 102, "best_day": 11, "prev_best": 11, "incentive": {"debit_orders": 9, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 16}}, {"name": "Lindiwe", "college": "Matric College", "aug_per_day": 8.15, "today": 0, "yesterday": 0, "week": 0, "month": 107, "best_day": 13, "prev_best": 13, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Eno", "college": "Bellview Inst.", "aug_per_day": 3.65, "today": 3, "yesterday": 1, "week": 4, "month": 58, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 4, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 21}}, {"name": "Hulda", "college": "Matric College", "aug_per_day": 2.95, "today": 2, "yesterday": 2, "week": 5, "month": 46, "best_day": 6, "prev_best": 6, "incentive": {"debit_orders": 5, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 20}}, {"name": "Ntase", "college": "Skills Academy", "aug_per_day": 8.2, "today": 2, "yesterday": 3, "week": 11, "month": 110, "best_day": 16, "prev_best": 16, "incentive": {"debit_orders": 11, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 14}}, {"name": "Fezekisiwe", "college": "Matric College", "aug_per_day": 4.85, "today": 0, "yesterday": 0, "week": 0, "month": 34, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}, {"name": "Leoto", "college": "Skills Academy", "aug_per_day": 5.1, "today": 5, "yesterday": 4, "week": 16, "month": 77, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 15, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 10}}, {"name": "Christa", "college": "Skills Academy", "aug_per_day": 3.45, "today": 4, "yesterday": 3, "week": 10, "month": 56, "best_day": 10, "prev_best": 10, "incentive": {"debit_orders": 10, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 15}}, {"name": "Priscilla", "college": "Bellview Inst.", "aug_per_day": 3.55, "today": 0, "yesterday": 0, "week": 0, "month": 15, "best_day": 8, "prev_best": 8, "incentive": {"debit_orders": 0, "enrolment_incentive": 0, "cash_collected": 0.0, "cash_incentive": 0, "paid": false, "total": 0, "next_level_at": 25, "next_level_amount": 400, "to_next_level": 25}}], "colleges": {"Bellview Inst.": {"now": 799, "expected": 836.8499999999999, "aug_per_day": 39.85, "pct": 95.4770866941507}, "Skills Academy": {"now": 1385, "expected": 1588.6499999999999, "aug_per_day": 75.64999999999999, "pct": 87.180939791647}, "Matric College": {"now": 611, "expected": 857.85, "aug_per_day": 40.85000000000001, "pct": 71.22457306055837}}, "periods": {"today": {"recorded_days": 1, "days": ["2026-09-30"]}, "yesterday": {"recorded_days": 1, "days": ["2026-09-29"]}, "week": {"recorded_days": 3, "days": ["2026-09-28", "2026-09-29", "2026-09-30"]}, "month": {"recorded_days": 21, "days": ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-14", "2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-25", "2026-09-28", "2026-09-29", "2026-09-30"]}}}</script>
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(location.search);
+  var PERIODS = [["today", "Today"], ["yesterday", "Yesterday"], ["week", "This week"], ["month", "This month"]];
+  var VIEWS = [["me", "Me"], ["league", "League"], ["colleges", "Colleges"]];
+  var period = params.get("period") || "today";
+  if (!PERIODS.some(function (x) { return x[0] === period; })) period = "today";
+  var view = params.get("view") || "me";
+  if (!VIEWS.some(function (x) { return x[0] === view; })) view = "me";
+  var person = params.get("person") || "Andre";
+  var data = null;
+
+  try { data = JSON.parse(document.getElementById("embedded-data").textContent); } catch (e) { data = null; }
+
+  function syncUrl() {
+    var q = new URLSearchParams({ person: person, period: period, view: view });
+    history.replaceState(null, "", "?" + q.toString());
+  }
+  function fmtR(n) { return "R\u00a0" + Math.round(n).toLocaleString("en-ZA"); }
+  function fmtD(iso) {
+    var d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
+  }
+  function fmtDT(s) {
+    var d = new Date(s);
+    return d.toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+  function pk(name) { return name.toLowerCase().replace(/\s+/g, " ").trim(); }
+  function countFor(p, per) {
+    if (per === "today") return p.today;
+    if (per === "yesterday") return p.yesterday == null ? 0 : p.yesterday;
+    if (per === "week") return p.week;
+    return p.month;
+  }
+  function periodDays(per) {
+    var pr = data && data.periods ? data.periods[per] : null;
+    return pr ? pr.recorded_days : 1;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function perLabel() { return PERIODS.filter(function (x) { return x[0] === period; })[0][1].toLowerCase(); }
+
+  function renderMeta() {
+    var el = document.getElementById("meta");
+    if (!data) { el.textContent = "waiting for first update"; return; }
+    el.textContent = "Updated " + fmtDT(data.generated_at) + " · data through " + fmtD(data.latest_day);
+  }
+
+  function renderControls() {
+    var sel = document.getElementById("person");
+    sel.innerHTML = "";
+    (data ? data.people : []).forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.name; o.textContent = p.name;
+      if (p.name === person) o.selected = true;
+      sel.appendChild(o);
+    });
+    if (data && !data.people.some(function (p) { return p.name === person; })) {
+      person = data.people[0].name;
+      sel.value = person;
+    }
+    sel.onchange = function () { person = sel.value; syncUrl(); renderAll(); };
+
+    [["periodSeg", PERIODS, function (v) { period = v; }, period], ["viewSeg", VIEWS, function (v) { view = v; }, view]]
+      .forEach(function (cfg) {
+        var box = document.getElementById(cfg[0]);
+        box.innerHTML = "";
+        cfg[1].forEach(function (kv) {
+          var b = document.createElement("button");
+          b.textContent = kv[1];
+          b.setAttribute("aria-pressed", String(kv[0] === cfg[3]));
+          b.onclick = function () { cfg[2](kv[0]); renderControls(); syncUrl(); renderAll(); };
+          box.appendChild(b);
+        });
+      });
+  }
+
+  function currentPerson() {
+    var k = pk(person);
+    for (var i = 0; i < data.people.length; i++) if (pk(data.people[i].name) === k) return data.people[i];
+    return data.people[0];
+  }
+
+  function renderMe() {
+    var p = currentPerson();
+    var days = periodDays(period);
+    var now = countFor(p, period);
+    var expected = p.aug_per_day * days;
+    var pct = expected > 0 ? (now / expected * 100) : (now > 0 ? 100 : 0);
+    var diff = now - expected;
+
+    document.getElementById("heroCount").textContent = now;
+    var dEl = document.getElementById("heroDelta");
+    var arrow = diff > 0 ? "\u25B2" : diff < 0 ? "\u25BC" : "\u2022";
+    dEl.textContent = arrow + " " + Math.abs(Math.round(pct)) + "% vs August pace";
+    dEl.className = "delta num " + (diff >= 0 ? "up" : "down");
+    document.getElementById("heroSub").textContent = now + " registration" + (now === 1 ? "" : "s") +
+      " this " + perLabel() + " \u00B7 August pace " + expected.toFixed(1).replace(/\.0$/, "") +
+      " (" + p.aug_per_day + "/day \u00D7 " + days + (days === 1 ? " day" : " days") + ")";
+
+    var target = Math.max(p.best_day, 1);
+    document.getElementById("bestBar").style.width = Math.min(100, now / target * 100) + "%";
+    var bl = document.getElementById("bestLabel");
+    if (now > p.best_day) bl.textContent = "New personal best \u2014 the previous best was " + p.best_day + "!";
+    else if (now === p.best_day && p.best_day > 0) bl.textContent = "Level with the personal best of " + p.best_day + ". One more beats it.";
+    else bl.textContent = (p.best_day - now + 1) + " more to beat the personal best of " + p.best_day + ".";
+
+    var cells = [
+      ["Personal best (day)", p.best_day],
+      ["Month total", p.month],
+      ["Week total", p.week],
+      ["August pace (/day)", p.aug_per_day]
+    ];
+    document.getElementById("statGrid").innerHTML = cells.map(function (c) {
+      return '<div class="cell"><div class="k">' + esc(c[0]) + '</div><div class="v num">' + esc(c[1]) + "</div></div>";
+    }).join("");
+
+    var i = p.incentive || {};
+    var lines = [
+      ["Qualifying debit orders", i.debit_orders != null ? i.debit_orders : "\u2013"],
+      ["Enrolment incentive", fmtR(i.enrolment_incentive || 0)],
+      ["Cash collected", fmtR(i.cash_collected || 0)],
+      ["Cash incentive", fmtR(i.cash_incentive || 0)],
+      ["Total recorded", fmtR(i.total || 0) + ' <span class="paid ' + (i.paid ? "yes" : "no") + '">' + (i.paid ? "paid" : "not paid yet") + "</span>"]
+    ];
+    if (i.next_level_at) lines.push(["Next enrolment level", i.to_next_level + " more \u2192 " + fmtR(i.next_level_amount) + " at " + i.next_level_at + " debit orders"]);
+    document.getElementById("incLines").innerHTML = lines.map(function (c) {
+      return '<div class="line"><span class="lab">' + esc(c[0]) + '</span><span class="val num">' + c[1] + "</span></div>";
+    }).join("");
+  }
+
+  function renderLeague() {
+    var days = periodDays(period);
+    var rows = data.people.map(function (p) {
+      var now = countFor(p, period);
+      var expected = p.aug_per_day * days;
+      var pctx = expected > 0 ? (now / expected * 100 - 100) : (now > 0 ? 100 : 0);
+      return { p: p, now: now, expected: expected, pct: pctx };
+    }).sort(function (a, b) { return b.pct - a.pct; });
+
+    document.getElementById("leagueSub").textContent = "Everyone compared with their own August pace, this " + perLabel() +
+      " (" + days + (days === 1 ? " day" : " days") + "). Names are visible to everyone \u2014 celebrate each other.";
+    var meKey = pk(person);
+    document.getElementById("leagueBody").innerHTML = rows.map(function (r, idx) {
+      var cls = r.pct >= 0 ? "up" : "down";
+      var sign = r.pct > 0 ? "+" : "";
+      return "<tr" + (pk(r.p.name) === meKey ? ' class="me"' : "") + ">" +
+        "<td class='num'>" + (idx + 1) + "</td><td>" + esc(r.p.name) + "</td>" +
+        "<td class='chip'>" + esc(r.p.college.replace(" Inst.", "")) + "</td>" +
+        "<td class='r num'>" + r.now + "</td>" +
+        "<td class='r num'>" + r.expected.toFixed(1).replace(/\.0$/, "") + "</td>" +
+        "<td class='r num pct " + cls + "'>" + sign + Math.round(r.pct) + "%</td></tr>";
+    }).join("");
+  }
+
+  function renderColleges() {
+    var days = periodDays("month");
+    document.getElementById("collegeSub").textContent = "Month to date (" + days + " recorded days) compared with August pace.";
+    var entries = Object.keys(data.colleges).map(function (k) { return { name: k, c: data.colleges[k] }; })
+      .sort(function (a, b) { return b.c.pct - a.c.pct; });
+    document.getElementById("collegeList").innerHTML = entries.map(function (e) {
+      var cls = e.c.pct >= 100 ? "up" : "down";
+      return '<div class="college"><div class="top"><span class="n">' + esc(e.name.replace(" Inst.", "")) +
+        '</span><span class="p num">' + e.c.now + ' now \u00B7 ' + Math.round(e.c.expected) + ' pace \u00B7 <span class="pct ' + cls + '">' +
+        Math.round(e.c.pct) + "%</span></span></div>" +
+        '<div class="bar"><div style="width:' + Math.min(100, e.c.pct) + '%"></div></div></div>';
+    }).join("");
+  }
+
+  function renderAll() {
+    renderMeta();
+    var has = !!data;
+    document.getElementById("loading").hidden = has;
+    document.getElementById("content").hidden = !has;
+    if (!has) return;
+    document.getElementById("viewMe").hidden = view !== "me";
+    document.getElementById("viewLeague").hidden = view !== "league";
+    document.getElementById("viewColleges").hidden = view !== "colleges";
+    if (view === "me") renderMe();
+    if (view === "league") renderLeague();
+    if (view === "colleges") renderColleges();
+  }
+
+  renderControls();
+  renderAll();
+
+  fetch("scoreboard.json", { cache: "no-store" }).then(function (r) {
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  }).then(function (fresh) {
+    data = fresh;
+    renderControls();
+    renderAll();
+  }).catch(function () { /* keep embedded data */ });
+})();
+</script>
+</body>
+</html>
