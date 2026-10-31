@@ -27,12 +27,58 @@ BASE = Path(__file__).resolve().parent
 CACHE = BASE / "sheets"
 OUT = BASE / "scoreboard.json"
 
-SHEETS = {
-    "current": "1KBcTzi88HrO1kVoTHOvM8ZRv52oOjgE-kPIgIg22J_A",   # current month's source sheet
-    "previous": "1HEe6HTjmz1knhvp02DliHapCqtM0pZuJasK9pYXb034",  # previous month (August)
-    "incentive": "1A8aqIF5etGw2CelyXDqCfnSlgCshGw3a0VqV80CvfL8",  # weekly incentives + cash
-    "comparison": "1j0DhPZkcBRQgGxKtbEOWNSKNXkqqhUh16BWgYeHTst8", # roster + colleges + Method
+# One entry per month, oldest first. "reg" = that month's Registration
+# Spreadsheet, "incentive" = that month's incentive spreadsheet (weekly
+# incentives + cash). All sheets must be shared "anyone with the link: viewer".
+# The pipeline picks the entry for the current month (South Africa time) as
+# "current", the entry before it as "previous", and loads every earlier month
+# as well for the personal-best-since-August figure. Add next month's two IDs
+# here before the 1st; if the current month is missing, the latest entry is
+# used and the run prints a loud WARNING so the page is not silently stale.
+MONTH_SHEETS = {
+    "2026-08": {"reg": "1HEe6HTjmz1knhvp02DliHapCqtM0pZuJasK9pYXb034"},
+    "2026-09": {"reg": "1KBcTzi88HrO1kVoTHOvM8ZRv52oOjgE-kPIgIg22J_A",
+                "incentive": "1A8aqIF5etGw2CelyXDqCfnSlgCshGw3a0VqV80CvfL8"},
+    "2026-10": {"reg": "124OiuQRk9COQPzMdhSMNvSK5DgOumIQB_DKtw4fcIiY",
+                "incentive": "1Bb017mci3fYz7X_jj8m_Rhz8d6tzwU6P0_YyUdObzrw"},
 }
+COMPARISON_SHEET = "1j0DhPZkcBRQgGxKtbEOWNSKNXkqqhUh16BWgYeHTst8"  # roster + August baselines + Method
+
+
+def pick_months(today=None):
+    """Return (current_key, previous_key, earlier_keys, config_is_stale)."""
+    from datetime import timezone, timedelta
+    today = today or datetime.now(timezone(timedelta(hours=2))).date()  # SAST
+    want = f"{today.year:04d}-{today.month:02d}"
+    keys = sorted(MONTH_SHEETS)
+    usable = [k for k in keys if k <= want]
+    if not usable:
+        raise SystemExit(f"MONTH_SHEETS has no entry on or before {want}")
+    cur = usable[-1]
+    stale = cur != want
+    prev = usable[-2] if len(usable) >= 2 else None
+    earlier = usable[:-2] if len(usable) >= 2 else []
+    return cur, prev, earlier, stale
+
+
+def build_sheets():
+    cur, prev, earlier, stale = pick_months()
+    if stale:
+        print(f"WARNING: no MONTH_SHEETS entry for the current month; using {cur}. "
+              f"Add this month's Registration and incentive sheet IDs to MONTH_SHEETS.", file=sys.stderr)
+    sheets = {"current": MONTH_SHEETS[cur]["reg"], "comparison": COMPARISON_SHEET}
+    inc = MONTH_SHEETS[cur].get("incentive")
+    if not inc:
+        raise SystemExit(f"MONTH_SHEETS[{cur!r}] has no incentive sheet ID")
+    sheets["incentive"] = inc
+    if prev:
+        sheets["previous"] = MONTH_SHEETS[prev]["reg"]
+    for k in earlier:
+        sheets[f"earlier_{k}"] = MONTH_SHEETS[k]["reg"]
+    return sheets, cur, stale
+
+
+SHEETS, CURRENT_MONTH, CONFIG_STALE = build_sheets()
 
 AUG_RECORDED_DAYS = 20  # per the Method tab
 
@@ -139,9 +185,14 @@ def count_incentive_do(ws):
     return counts
 
 
-def load_daily_book(path, do_counter=count_daily_debit_orders):
-    """{date: {'reg': {name: n}, 'do': {name: n}}} for every day tab in a workbook."""
-    wb = openpyxl.load_workbook(path, read_only=True)
+def load_daily_book(path, do_counter=count_daily_debit_orders, data_only=False):
+    """{date: {'reg': {name: n}, 'do': {name: n}}} for every day tab in a workbook.
+
+    data_only=True reads the cached values of formula cells. The incentive
+    sheet's daily tabs are IMPORTRANGE formulas from October 2026 onwards, so
+    without it every cell reads as "=IFERROR(..." and no debit order is counted.
+    """
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=data_only)
     days = {}
     for ws in wb.worksheets:
         d = parse_day_tab(ws.title)
@@ -213,11 +264,15 @@ def main():
     roster_keys = {norm(p["name"]) for p in roster}
 
     # ---- daily data ----
-    prev_days = load_daily_book(files["previous"])   # August
+    prev_days = load_daily_book(files["previous"]) if "previous" in files else {}   # previous month
     curr_days = load_daily_book(files["current"])    # current month
-    inc_days = load_daily_book(files["incentive"], do_counter=count_incentive_do)  # incentive sheet's own daily tabs
+    inc_days = load_daily_book(files["incentive"], do_counter=count_incentive_do, data_only=True)  # incentive sheet's own daily tabs
 
-    all_days = {**prev_days, **curr_days}
+    all_days = {}
+    for key in sorted(k for k in files if k.startswith("earlier_")):
+        all_days.update(load_daily_book(files[key]))  # months before "previous", for personal best since August
+    all_days.update(prev_days)
+    all_days.update(curr_days)
     if not curr_days:
         print("WARNING: no daily tabs in current month sheet", file=sys.stderr)
         curr_days = prev_days
@@ -286,7 +341,7 @@ def main():
         for k, v in inc_days[d]["do"].items():
             do_counts[k] = do_counts.get(k, 0) + v
 
-    wb = openpyxl.load_workbook(files["incentive"], read_only=True)
+    wb = openpyxl.load_workbook(files["incentive"], read_only=True, data_only=True)
     # find the week-number of the current week from tab names like 'Week 3 Total'
     week_tabs = [t for t in wb.sheetnames if re.match(r"^Week\s+\d+\s+Total$", t.strip())]
     cash_rows = []
@@ -371,6 +426,8 @@ def main():
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "latest_day": latest.isoformat(),
+        "month": CURRENT_MONTH,
+        "config_stale": CONFIG_STALE,
         "month_recorded_days": month_days_n,
         "aug_recorded_days": AUG_RECORDED_DAYS,
         "people": people,

@@ -4,7 +4,7 @@ A public, self-updating sales scoreboard for the team.
 
 - `index.html` — the scoreboard page (person picker, Today/Yesterday/Week/Month, league, colleges, weekly incentives).
 - `scoreboard.json` — the latest computed numbers (regenerated hourly during work hours).
-- `scoreboard_pipeline.py` — reads the team's four public Google Sheets and applies the comparison-report counting rules.
+- `scoreboard_pipeline.py` — reads the team's public Google Sheets and applies the comparison-report counting rules. It picks the current month's Registration and incentive sheets from `MONTH_SHEETS` automatically (South Africa time); **before the 1st of each month, add the new month's two sheet IDs to `MONTH_SHEETS` and share both sheets as "anyone with the link: viewer"**. If the current month is missing, the run uses the latest month available and prints a WARNING, and `scoreboard.json` carries `config_stale: true`.
 - `.github/workflows/refresh.yml` — hourly refresh in the cloud (Mon–Fri, South African work hours).
 
 ## Counting rules
