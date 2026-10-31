@@ -9,6 +9,9 @@ def load(path_or_url):
 
 def main(sales, coll):
     S, C = load(sales), load(coll)
+    age = (datetime.date.today() - datetime.date.fromisoformat(S['latest_day'])).days
+    if age > 4:
+        sys.exit(f"STALE: sales data ends {S['latest_day']} ({age} days ago, generated {S['generated_at']}); do not send the highlights")
     month = S['month']; days = {k: v for k, v in S['days'].items() if k.startswith(month)}
     latest = S['latest_day']; today = days.get(latest, {})
     people = {p['key']: p for p in S['roster']}
