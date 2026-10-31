@@ -21,3 +21,22 @@ a student name or CRM ID, unless its status is "Cancelled". "Confirmed" and
   10000–19999 → R300, 20000–29999 → R500, 30000–39999 → R700, 40000+ → R1000).
 
 No student names, contact details or CRM IDs appear anywhere in this repository or on the page.
+
+## Version 2 (`v2/`)
+
+A role-based page for Leadership, Sales Manager, Sales Agent, Collections Manager
+and Collections Agent, served from the same repository at `/v2/`.
+
+- `v2/index.html`, `v2/app.js`, `v2/style.css` — the page. The view and person are kept in the URL
+  (`#role=sales-agent&who=kenneth`) so each registrar can bookmark their own page.
+- `v2/pipeline_sales.py` — runs the v1 pipeline, then records per-day, per-registrar sale detail
+  (debit-order mandate, upfront cash, monthly instalment band, first-payment lead time, digital vs
+  pick-up) into `v2/data/sales.json`. Earlier months are kept in that file, so a month survives
+  even when its sheet is no longer shared. Registrars who sell but are not on the comparison-sheet
+  roster are included with the college of the sheet section they appear in.
+- `v2/pipeline_collections.py` — reads two **internal** sheets (Collections Daily Goal, 2026
+  Cancellation Track Sheet) with the `gws` CLI and writes de-identified aggregates to
+  `v2/data/collections.json`. Those sheets hold student details and must stay private, so this
+  script is run from a trusted machine or scheduled task, not from the public GitHub Action.
+  No student names, numbers or phone numbers are written.
+- The Action refreshes `scoreboard.json` and `v2/data/sales.json` every 10 minutes in work hours.

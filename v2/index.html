@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every Sale Matters — Sales & Collections</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23f5b942%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-family=%27sans-serif%27 font-weight=%27800%27 font-size=%2718%27 text-anchor=%27middle%27 fill=%27%231a1300%27%3EE%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">E</div>
+      <div><strong>Every Sale Matters</strong><small id="asof">Loading…</small></div>
+    </div>
+    <nav class="roles" id="roles" aria-label="View">
+      <button data-role="leadership" aria-pressed="true">Leadership</button>
+      <button data-role="sales-manager" aria-pressed="false">Sales Manager</button>
+      <button data-role="sales-agent" aria-pressed="false">Sales Agent</button>
+      <button data-role="collections-manager" aria-pressed="false">Collections Manager</button>
+      <button data-role="collections-agent" aria-pressed="false">Collections Agent</button>
+    </nav>
+    <div class="picker" id="picker" hidden>
+      <label for="person" class="xs muted">Who</label>
+      <select id="person"></select>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+  <div class="empty">Loading scoreboard data…</div>
+</main>
+
+<footer>
+  <span>Counting rule: a registration counts when it names the registrar and a student or CRM ID and is not cancelled. No student details appear on this page.</span>
+  <span id="foot-fresh"></span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -22,13 +22,13 @@ jobs:
       - name: Install dependencies
         run: pip install openpyxl
 
-      - name: Recompute scoreboard data from the team Google Sheets
-        run: python scoreboard_pipeline.py
+      - name: Recompute scoreboard data from the team Google Sheets (v1 + v2 sales)
+        run: python v2/pipeline_sales.py
 
       - name: Publish updated data
         run: |
           git config user.name "scoreboard-bot"
           git config user.email "scoreboard-bot@users.noreply.github.com"
-          git add scoreboard.json
+          git add scoreboard.json v2/data/sales.json
           git diff --cached --quiet || git commit -m "Update scoreboard data"
           git push
