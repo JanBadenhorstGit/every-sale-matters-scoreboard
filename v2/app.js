@@ -746,6 +746,6 @@
 
   readHash();
   load().catch(err => { $('#app').innerHTML = ''; $('#app').append(el('div', { class: 'empty' }, 'Could not load scoreboard data: ' + err.message)); });
-  // auto-refresh every 10 minutes
-  setInterval(() => load().catch(() => {}), 10 * 60 * 1000);
+  // auto-refresh every 15 minutes (data changes every 30)
+  setInterval(() => load().catch(() => {}), 15 * 60 * 1000);
 })();

@@ -3,7 +3,7 @@ name: Refresh scoreboard data
 on:
   schedule:
     # Every 10 minutes Mon–Fri, 08:00–18:00 South Africa time (06:00–16:00 UTC)
-    - cron: "*/10 6-16 * * 1-5"
+    - cron: "*/30 6-16 * * 1-5"
   workflow_dispatch:
 
 permissions:

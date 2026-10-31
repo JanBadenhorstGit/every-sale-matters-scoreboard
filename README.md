@@ -39,4 +39,4 @@ and Collections Agent, served from the same repository at `/v2/`.
   `v2/data/collections.json`. Those sheets hold student details and must stay private, so this
   script is run from a trusted machine or scheduled task, not from the public GitHub Action.
   No student names, numbers or phone numbers are written.
-- The Action refreshes `scoreboard.json` and `v2/data/sales.json` every 10 minutes in work hours.
+- The Action refreshes `scoreboard.json` and `v2/data/sales.json` every 30 minutes in work hours (08:00–18:30 SAST, Mon–Fri).
