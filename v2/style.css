@@ -79,7 +79,7 @@ main { max-width: 1400px; margin: 0 auto; padding: var(--sp-5); display: grid; g
 .card.hero { background: linear-gradient(160deg, #1d242c 0%, #161b21 70%); }
 
 .kpi .label { color: var(--muted); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-.kpi .value { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.1; margin: 6px 0 4px; }
+.kpi .value { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.1; margin: 6px 0 4px; overflow-wrap: anywhere; }
 .kpi .sub { color: var(--muted); font-size: var(--text-sm); }
 .kpi .delta { font-weight: 600; font-size: var(--text-sm); }
 

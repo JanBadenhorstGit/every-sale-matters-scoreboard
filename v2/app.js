@@ -206,6 +206,24 @@
 
     const bankMonths = Object.keys(raw.bank || {}).sort();
     const goalMonths = Object.keys(raw.goals || {}).sort();
+    // The goal sheet's "actual" is cumulative bank collections from the 8th. Where the goal tab stops
+    // being filled in but the bank tabs continue, extend the actual line from the bank tabs (marked derived).
+    for (const m of goalMonths) {
+      const g = raw.goals[m]; const bankM = raw.bank[m];
+      const nextM = (() => { const y = +m.slice(0, 4), mo = +m.slice(5, 7); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; })();
+      const bankNext = raw.bank[nextM];
+      const dayColl = (bank, dom) => bank ? Object.values(bank).reduce((t, rows) => t + rows.filter(r => r.dom === dom).reduce((u, r) => u + (r.collections || 0), 0), 0) : null;
+      const hasBankDay = (bank, dom) => !!bank && Object.values(bank).some(rows => rows.some(r => r.dom === dom));
+      let cum = 0; let filled = 0; g.sheetTo = null;
+      for (const r of g) {
+        const inThisMonth = r.dom >= 8; const bank = inThisMonth ? bankM : bankNext;
+        if (r.actual_cum != null) { cum = r.actual_cum; g.sheetTo = r.dom; continue; }
+        if (inThisMonth && r.dom > new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate()) continue; // e.g. 31 Sep
+        if (!hasBankDay(bank, r.dom)) break;
+        cum += dayColl(bank, r.dom); r.actual_cum = Math.round(cum * 100) / 100; r.derived = true; filled++;
+      }
+      g.derivedDays = filled;
+    }
     return { raw, cycles, cur, prev, perCycle, bankMonths, goalMonths, agg };
   }
 
@@ -298,6 +316,14 @@
   };
 
   // ---------- views ----------
+  function goalNote(g, goalMonth, D) {
+    const mo = MONTHS[+goalMonth.slice(5, 7) - 1];
+    const parts = ['collections banked since the 8th'];
+    if (g.sheetTo != null && g.derivedDays) parts.push(`goal tab filled to ${g.sheetTo} ${mo}, rest from bank tabs`);
+    else if (g.sheetTo != null) parts.push(`goal tab filled to ${g.sheetTo} ${mo}`);
+    if (goalMonth < D.month) parts.push(`no ${monthLabel(D.month)} tab yet`);
+    return parts.join(' · ');
+  }
   function viewLeadership(D, C) {
     const t = D.team; const out = [];
     const cur = C && C.cur ? C.perCycle[C.cur] : null;
@@ -320,14 +346,14 @@
       kpi(`Registrations · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`, n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of August pace' : 'no baseline'} · ${D.recorded} of ${D.workDays} days`, paceClass(t.pct)),
       kpi('Projected month end', n0(Math.round(t.projection)), `${n1(t.perDay)}/day · August pace ${n0(Math.round(t.augPerDay * D.workDays))}`, t.projection >= t.augPerDay * D.workDays ? 'good' : 'bad'),
       kpi('Debit orders on new sales', pct(t.m.do, t.m.reg), `${n0(t.m.do)} of ${n0(t.m.reg)} this month`),
-      kpi('Upfront cash on new sales', rand(t.m.paid_amt), `${n0(t.m.paid_n)} sales paid something upfront (${pct(t.m.paid_n, t.m.reg)})`),
+      kpi('Upfront cash on new sales', randK(t.m.paid_amt), `${rand(t.m.paid_amt)} · ${n0(t.m.paid_n)} sales paid something upfront (${pct(t.m.paid_n, t.m.reg)})`),
       kpi(bankMonth ? `Banked · ${MONTHS[+bankMonth.slice(5, 7) - 1]}` : 'Banked cash', bankColl != null ? randK(bankColl + bankSales) : '–', bankColl != null ? `${randK(bankColl)} collections + ${randK(bankSales)} sales` : 'no bank data', bankMonth && bankMonth < D.month ? 'bad' : ''),
       kpi(cur ? `Cancellations · cycle from ${dShort(cur.start)}` : 'Cancellations', cur ? n0(cur.agg.total) : '–', cur ? `${n0(cur.agg.saved)} saved · ${cur.agg.saveRate != null ? Math.round(cur.agg.saveRate) + '% save rate' : ''} · ${n0(cur.agg.open + cur.agg.unprocessed)} open` : 'no data'),
     ));
 
     // Charts: daily registrations stacked by college + August pace
     const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = August pace');
-    const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · ${monthLabel(goalMonth)} cycle (8th–7th)` : 'Cash goal vs actual', goalMonth && goalMonth < D.month ? 'latest cycle in the sheet' : '');
+    const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
     out.push(el('section', { class: 'grid two' }, c1, c2));
 
     // College cards
@@ -365,7 +391,7 @@
         const g = C.raw.goals[goalMonth];
         chart(cv2, { type: 'line', data: { labels: g.map(r => r.dom), datasets: [
           { label: 'Goal (cumulative)', data: g.map(r => r.goal_cum), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
-          { label: 'Actual (cumulative)', data: g.map(r => r.actual_cum), borderColor: '#f5b942', backgroundColor: 'rgba(245,185,66,0.15)', fill: true, pointRadius: 0, borderWidth: 2, spanGaps: false },
+          { label: 'Actual (cumulative)', data: g.map(r => r.actual_cum), borderColor: '#f5b942', backgroundColor: 'rgba(245,185,66,0.15)', fill: true, pointRadius: 0, borderWidth: 2, spanGaps: false, segment: { borderDash: ctx => g[ctx.p1DataIndex] && g[ctx.p1DataIndex].derived ? [3, 3] : undefined } },
         ] }, options: { maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'day of month (cycle starts on the 8th)' }, grid: { display: false } }, y: { ticks: { callback: v => randK(v) } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${rand(c.parsed.y)}` } } } } });
       } else cv2.replaceWith(el('div', { class: 'empty' }, 'No cash-goal data'));
       // per-month averages
@@ -552,7 +578,7 @@
       kpi('Reached on first call', pct(cur.rows.filter(r => r.attempts[0] && /success/i.test(r.attempts[0])).length, cur.rows.filter(r => r.attempts.length).length), `${n0(a.contacts)} successful of ${n0(a.attempts)} attempts · ${n0(a.offers)} offers made`),
     ));
 
-    const { card: c1, canvas: cv1 } = chartCard(goalMonth ? `Cash goal vs actual · ${monthLabel(goalMonth)} cycle` : 'Cash goal vs actual', stale ? `sheet has no ${monthLabel(D.month)} tab yet` : 'cycle runs 8th to 7th');
+    const { card: c1, canvas: cv1 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(g, goalMonth, D) : '');
     const { card: c2, canvas: cv2 } = chartCard(bankMonth ? `Daily collections banked by college · ${monthLabel(bankMonth)}` : 'Daily collections banked', 'from the bank tabs');
     out.push(el('section', { class: 'grid two' }, c1, c2));
 
@@ -597,7 +623,7 @@
     requestAnimationFrame(() => {
       if (g) chart(cv1, { type: 'line', data: { labels: g.map(r => r.dom), datasets: [
         { label: 'Goal', data: g.map(r => r.goal_cum), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
-        { label: 'Actual', data: g.map(r => r.actual_cum), borderColor: '#f5b942', backgroundColor: 'rgba(245,185,66,0.15)', fill: true, pointRadius: 0, borderWidth: 2 },
+        { label: 'Actual', data: g.map(r => r.actual_cum), borderColor: '#f5b942', backgroundColor: 'rgba(245,185,66,0.15)', fill: true, pointRadius: 0, borderWidth: 2, segment: { borderDash: ctx => g[ctx.p1DataIndex] && g[ctx.p1DataIndex].derived ? [3, 3] : undefined } },
       ] }, options: { maintainAspectRatio: false, scales: { x: { grid: { display: false }, title: { display: true, text: 'day of month' } }, y: { ticks: { callback: v => randK(v) } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${rand(c.parsed.y)}` } } } } });
       else cv1.replaceWith(el('div', { class: 'empty' }, 'No goal data'));
       if (bank) {
