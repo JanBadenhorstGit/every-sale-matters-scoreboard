@@ -56,3 +56,19 @@ and Collections Agent, served from the same repository at `/v2/`.
 - `v2/discover_sheets.py` finds each month's Registration and incentive sheets by name in Drive, shares them
   viewer-by-link and writes `month_sheets.json`, which `scoreboard_pipeline.py` merges into `MONTH_SHEETS`.
   It runs in the private weekday-morning task together with the collections refresh.
+
+### v2.2 additions (1 Nov 2026)
+
+- **North star** on Leadership: paying students added this month (debit orders signed − cancelled this cycle) with its drivers.
+- **Today's three** (Leadership, Sales Manager, Collections Manager, and the top of each email): actions ranked by
+  estimated cash impact (students × average instalment × 12 months, discounted as shown).
+- **80/20 card**: share of sales and of expected cash held by the top 4%, top 20% and bottom 50% of registrars and course families.
+- **League ranked by expected 12-month cash** (toggle) alongside the volume ranking.
+- **Where the lost cash is** (Collections Manager): cancelled requests valued by course type, by reason and course,
+  plus save rate per salvage-offer type (bucketed from the free-text column).
+- **Tests register**: a Google Sheet (`ESM Tests register`) read by the private collections refresh; the board shows
+  conversion per variant, lift and a 95% two-proportion z-test, declaring a winner only when the test is marked Done.
+- **Cancellation sheet parsing is now content-anchored**: the trailing columns drift between tabs (October 2026's
+  header row is one column out of step with its data from "Account status" onward; earlier tabs have one more column),
+  so Course/College/agent columns are located by content rather than by fixed index. Earlier cycles were mis-read before this.
+- Instalment amounts above R20,000 are treated as capture errors (an August row carried a six-figure value).

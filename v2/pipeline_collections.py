@@ -32,6 +32,7 @@ OUT = HERE / "data" / "collections.json"
 
 SHEETS = {
     "collections_goal": "12kFS07aCpsQbD_SJUP7JlTgUKjkqXFgii2eGMxIbRdI",
+    "tests": "1-m8103ELclQ4D-awSBqK57315XX6vpe_2K11OvwG4YQ",  # ESM Tests register (Jan)
     "cancellations": "1iKxDM1EEYgd6a1MOIlG5r09CWABgAB9XtrAiVV7GNsI",
 }
 YEAR = 2026
@@ -156,6 +157,55 @@ def agent_name(v):
     return s.split("@")[0].strip().title()
 
 
+COURSE_TYPES = {"matric", "provider", "qcto", "icb", "nated"}
+ACC_STATUSES = {"current", "on hold", "pending", "study break", "cancelled", "canceled", "paid up"}
+
+
+def detect_layout(raw_rows):
+    """Find the Course column by content and anchor the trailing columns on it.
+
+    The sheet's trailing columns drift between tabs (October 2026 rows sit one column left of
+    their headers from 'Account status' onward), so the header row cannot be trusted. Course
+    is the one column whose values are almost all Matric/Provider/QCTO/ICB/Nated; College is
+    the column after it; Agent (sales), Collection agent and Student advisor are the three
+    columns before it; Account status is the column before those only if it looks like one.
+    """
+    width = max((len(r) for r in raw_rows), default=0)
+    best, best_i = 0, None
+    for i in range(20, width):
+        vals = [str(r[i]).strip().lower() for r in raw_rows if i < len(r) and r[i] is not None]
+        if len(vals) < 5:
+            continue
+        hit = sum(v in COURSE_TYPES for v in vals) / len(vals)
+        if hit > best:
+            best, best_i = hit, i
+    if best_i is None or best < 0.8:
+        return None
+    c = best_i
+    acc_vals = [str(r[c - 5]).strip().lower() for r in raw_rows if c - 5 < len(r) and r[c - 5] is not None]
+    acc_ok = acc_vals and sum(v in ACC_STATUSES for v in acc_vals) / len(acc_vals) > 0.6
+    return {"course": c, "college": c + 1, "sales_agent": c - 2, "agent": c - 3, "advisor": c - 4,
+            "acc_status": c - 5 if acc_ok else None, "shifted": not acc_ok}
+
+
+def offer_type(v):
+    """Bucket the free-text 'Salvage Offer Made' into a handful of offer types."""
+    t = str(v or "").strip().lower()
+    if not t or t.startswith("no offer"):
+        return None
+    if "transfer" in t or "tranfer" in t or "change" in t and "course" in t:
+        return "Course transfer"
+    if "study break" in t or "hold" in t:
+        return "Study break / hold"
+    if "payment plan" in t or "instal" in t or "lower" in t or "split" in t or "arrang" in t:
+        return "Payment plan"
+    if "payment method" in t or "debit" in t:
+        return "Change payment method"
+    if "advise" in t or "advice" in t or "import" in t or "motivat" in t:
+        return "Motivation / advice"
+    return "Other offer"
+
+
 def parse_cancellations(wb, max_cycles=4):
     cycles = {}
     for title in wb.sheetnames:
@@ -164,7 +214,14 @@ def parse_cancellations(wb, max_cycles=4):
             continue
         start, end = span
         rows = []
-        for r in wb[title].iter_rows(min_row=3, values_only=True):
+        raw = [r for r in wb[title].iter_rows(min_row=3, values_only=True) if r and r[0]]
+        lay = detect_layout(raw)
+        if not lay:
+            print(f"cancellations: could not detect course column in '{title}', skipped", file=sys.stderr)
+            continue
+        if lay["shifted"]:
+            print(f"cancellations: '{title}' rows are offset from headers (no Account status column)", file=sys.stderr)
+        for r in raw:
             logged = to_date(r[0] if r else None)
             if not logged:
                 continue
@@ -188,8 +245,8 @@ def parse_cancellations(wb, max_cycles=4):
             rows.append({
                 "logged": logged.isoformat(),
                 "logger": agent_name(g(3)),
-                "college": COLLEGE_ALIASES.get(str(g(29) or "").strip().lower(), str(g(29) or "").strip() or None),
-                "course": str(g(28) or "").strip() or None,
+                "college": COLLEGE_ALIASES.get(str(g(lay["college"]) or "").strip().lower(), str(g(lay["college"]) or "").strip() or None),
+                "course": str(g(lay["course"]) or "").strip() or None,
                 "category": str(g(15) or "").strip() or None,
                 "status": status or None,
                 "processed": processed,
@@ -198,15 +255,37 @@ def parse_cancellations(wb, max_cycles=4):
                 "offer_made": bool(str(g(18) or "").strip()) and not str(g(18) or "").strip().lower().startswith("no offer"),
                 "offer_accepted": yes(g(19)),
                 "our_fault": fault.startswith("yes"),
-                "acc_status": str(g(23) or "").strip() or None,
-                "advisor": agent_name(g(24)),
-                "agent": agent_name(g(25)),
-                "sales_agent": agent_name(g(26)),
+                "offer": offer_type(g(18)),
+                "acc_status": (str(g(lay["acc_status"]) or "").strip() or None) if lay["acc_status"] is not None else None,
+                "advisor": agent_name(g(lay["advisor"])),
+                "agent": agent_name(g(lay["agent"])),
+                "sales_agent": agent_name(g(lay["sales_agent"])),
             })
         cycles[start.isoformat()] = {"label": title.strip(), "start": start.isoformat(),
-                                     "end": end.isoformat(), "rows": rows}
+                                     "end": end.isoformat(), "rows": rows,
+                                     "layout_shifted": lay["shifted"]}
     keep = sorted(cycles)[-max_cycles:]
     return {k: cycles[k] for k in keep}
+
+
+def parse_tests(wb):
+    """Tests register: one row per A/B or price test with exposed/converted counts per variant."""
+    if "Tests" not in wb.sheetnames:
+        return []
+    out = []
+    for r in wb["Tests"].iter_rows(min_row=2, values_only=True):
+        if not r or not r[0] or str(r[0]).strip().lower().startswith("example"):
+            continue
+        g = lambda i: r[i] if i < len(r) else None  # noqa: E731
+        d = lambda v: (to_date(v).isoformat() if to_date(v) else None)  # noqa: E731
+        out.append({
+            "test": str(g(0)).strip(), "type": str(g(1) or "").strip() or None, "owner": str(g(2) or "").strip() or None,
+            "start": d(g(3)), "end": d(g(4)), "metric": str(g(5) or "").strip() or None,
+            "a": {"name": str(g(6) or "A").strip(), "n": int(num(g(7)) or 0), "conv": int(num(g(8)) or 0)},
+            "b": {"name": str(g(9) or "B").strip(), "n": int(num(g(10)) or 0), "conv": int(num(g(11)) or 0)},
+            "status": str(g(12) or "").strip() or None, "notes": str(g(13) or "").strip() or None,
+        })
+    return out
 
 
 def main():
@@ -246,6 +325,11 @@ def main():
         payload["sources"]["cancellations"] = {"sheet": SHEETS["cancellations"],
                                                "latest_logged": max(all_logged) if all_logged else None,
                                                "rows": len(all_logged)}
+    if "tests" in files:
+        wb = openpyxl.load_workbook(files["tests"], read_only=True, data_only=True)
+        payload["tests"] = parse_tests(wb)
+        wb.close()
+        payload["sources"]["tests"] = {"sheet": SHEETS["tests"], "rows": len(payload["tests"])}
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(payload, separators=(",", ":"), default=str))
     print(f"wrote {OUT} ({OUT.stat().st_size} bytes)", file=sys.stderr)

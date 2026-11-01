@@ -501,6 +501,164 @@
       q.length ? sortableTable(cols, q.slice(0, 60), 'age') : el('div', { class: 'empty' }, 'No open requests'),
       q.length > 60 ? el('p', { class: 'note', style: 'margin:8px 0 0' }, `Showing the 60 oldest of ${q.length}.`) : null);
   }
+  // ---------- v2.2 analysis: north star, 80/20, expected cash, top actions, cancellation 80/20 ----------
+  // Cancellation requests per registrar first name over this cycle and the previous one.
+  function cancelsByRegistrar(C) {
+    const out = {};
+    if (!C) return out;
+    for (const k of [C.prev, C.cur]) if (k) for (const [n, s] of Object.entries(C.perCycle[k].agg.bySales)) out[n] = (out[n] || 0) + s.total;
+    return out;
+  }
+  // Average monthly instalment per course type over this and last month (used to value cancellations).
+  function avgInstByDept(D) {
+    const acc = {};
+    for (const m of [D.prevMonth, D.month]) for (const v of Object.values((D.raw.course_months || {})[m] || {})) { const a = acc[v.dept] ||= { s: 0, n: 0 }; a.s += v.inst_sum || 0; a.n += v.inst_n || 0; }
+    const out = {}; for (const [d, a] of Object.entries(acc)) out[d] = a.n ? a.s / a.n : null;
+    out._team = D.team.avgInst;
+    return out;
+  }
+  // Expected 12-month cash from this month's sales: monthly value signed × 12 × (1 − cancellation rate) + upfront cash.
+  // Cancellation rate = requests per 100 sales over this + last cycle, capped at 50%. An estimate, not a forecast of what will bank.
+  function expectedCash(p, cancels) {
+    const base = (p.m.reg || 0) + (p.pm ? p.pm.reg : 0);
+    const rate = base ? Math.min(0.5, (cancels || 0) / base) : 0;
+    return (p.m.inst_sum || 0) * 12 * (1 - rate) + (p.m.paid_amt || 0);
+  }
+  const HORIZON = 12; // months of instalments used to value a student
+
+  function northStarCard(D, C) {
+    const t = D.team; const cur = C && C.cur ? C.perCycle[C.cur] : null;
+    const payingReady = t.m.do; // students who signed with a debit order this month
+    const cancelled = cur ? cur.agg.cancelled : null;
+    const net = cancelled != null ? payingReady - cancelled : null;
+    const drivers = [
+      ['Registrations', n0(t.m.reg), `${D.recorded} of ${D.workDays} days`],
+      ['× Debit-order rate', pct(t.m.do, t.m.reg), `${n0(t.m.reg - t.m.do)} sales without a D/O`],
+      ['− Cancelled this cycle', cancelled != null ? n0(cancelled) : '–', cur ? `${n0(cur.agg.saved)} saved · ${n0(cur.agg.open + cur.agg.unprocessed)} still open` : 'no data'],
+      ['Upfront cash', randK(t.m.paid_amt), `${n0(t.m.paid_n)} sales paid something upfront`],
+    ];
+    return el('section', { class: 'card north' },
+      el('div', { class: 'north-main' },
+        el('div', { class: 'label' }, `Paying students added · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`),
+        el('div', { class: 'value num ' + (t.pct != null ? paceClass(t.pct) : '') }, net != null ? n0(net) : n0(payingReady)),
+        el('div', { class: 'sub' }, `${n0(payingReady)} signed with a debit order${cancelled != null ? ` − ${n0(cancelled)} cancelled this cycle` : ''} · everything below is a driver of this number`)),
+      el('div', { class: 'north-drivers' }, drivers.map(d => el('div', {}, el('span', { class: 'xs muted' }, d[0]), el('b', { class: 'num' }, d[1]), el('span', { class: 'xs faint' }, d[2])))),
+      el('p', { class: 'note' }, `Proxy: a debit order in place is the best signal of a paying student until first-debit-order outcomes are connected. Cancellations are this cycle's, not only this month's sales.`));
+  }
+
+  // 80/20: share of count and of cash held by the top 4%, top 20% and bottom 50% of a ranked list.
+  function pareto(items, countKey, cashKey) {
+    const sorted = [...items].filter(x => x[countKey] > 0).sort((a, b) => b[cashKey] - a[cashKey]);
+    const n = sorted.length; const tc = sorted.reduce((a, x) => a + x[countKey], 0); const tv = sorted.reduce((a, x) => a + x[cashKey], 0);
+    const seg = (from, to) => { const s = sorted.slice(from, to); return { n: s.length, names: s.map(x => x.name), count: pctN(s.reduce((a, x) => a + x[countKey], 0), tc), cash: pctN(s.reduce((a, x) => a + x[cashKey], 0), tv) }; };
+    if (n < 5) return null;
+    const top4 = Math.max(1, Math.round(n * 0.04)); const top20 = Math.max(1, Math.round(n * 0.2)); const half = Math.floor(n / 2);
+    return { n, top4: seg(0, top4), top20: seg(0, top20), bottom50: seg(n - half, n), sorted, tc, tv };
+  }
+  function paretoCard(D, C) {
+    const cz = cancelsByRegistrar(C);
+    const regs = D.people.filter(p => p.m.reg > 0).map(p => ({ name: p.name, count: p.m.reg, cash: expectedCash(p, cz[firstName(p.name)]) }));
+    const cm = (D.raw.course_months || {})[D.month] || {};
+    const courses = Object.entries(cm).map(([fam, v]) => ({ name: fam, count: v.n, cash: v.inst_sum * HORIZON + (v.paid_amt || 0) }));
+    const pr = pareto(regs, 'count', 'cash'); const pc = pareto(courses, 'count', 'cash');
+    const block = (title, p, unit) => !p ? el('div', { class: 'empty' }, 'not enough data') : el('div', { class: 'pareto' },
+      el('h3', {}, title, ' ', el('span', { class: 'xs muted' }, `${p.n} ${unit}`)),
+      [['Top 4%', p.top4], ['Top 20%', p.top20], ['Bottom 50%', p.bottom50]].map(([lab, s]) => el('div', { class: 'pareto-row' },
+        el('span', {}, el('b', {}, lab), el('br'), el('span', { class: 'xs muted' }, `${s.n} ${unit === 'registrars' ? (s.n === 1 ? 'registrar' : 'registrars') : (s.n === 1 ? 'family' : 'families')}`)),
+        el('span', { class: 'num' }, `${Math.round(s.count)}% of sales`),
+        el('span', { class: 'num ' + (s.cash >= 50 ? 'good' : s.cash < 15 ? 'bad' : '') }, `${Math.round(s.cash)}% of cash`),
+        el('span', { class: 'xs faint names' }, lab === 'Bottom 50%' ? '' : s.names.slice(0, 4).join(', ') + (s.names.length > 4 ? ` +${s.names.length - 4}` : '')))));
+    return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, '80/20'), el('span', { class: 'xs muted' }, 'this month · cash = expected 12-month value')),
+      block('Registrars', pr, 'registrars'), block('Course families', pc, 'families'),
+      el('p', { class: 'note' }, 'Cash = monthly instalments signed × 12 × (1 − cancellation rate) + upfront. Lead sources and channels join this table once the ActiveCampaign feed is connected.'));
+  }
+
+  // Today's three: alerts and gaps ranked by estimated cash impact (12 months of instalments per student).
+  function actionsFor(D, C) {
+    const A = []; const t = D.team; const inst = avgInstByDept(D); const avg = inst._team || 600;
+    const add = (role, impact, text, why) => A.push({ role, impact, text, why });
+    // Sales: registrars who usually sell but were at zero on the latest day
+    for (const p of D.people) if (p.active && p.today === 0 && p.perDay >= 2 && p.m.reg > 0) add('sales', p.perDay * (p.avgInst || avg) * HORIZON, `Call ${p.name}: no sale ${dShort(D.latest)}, usually ${n1(p.perDay)}/day`, 'a lost day at their rate');
+    // Sales: D/O gap vs team
+    for (const p of D.people) if (p.m.reg >= 15 && p.doRate != null && t.doRate != null && p.doRate < t.doRate - 15) { const gap = Math.round((t.doRate - p.doRate) / 100 * p.m.reg); add('sales', gap * (p.avgInst || avg) * HORIZON * 0.5, `Coach ${p.name} on debit orders: ${Math.round(p.doRate)}% vs team ${Math.round(t.doRate)}% (${gap} sales without a mandate)`, 'half the value of the missing mandates'); }
+    // Sales: course families with low D/O
+    const cm = (D.raw.course_months || {})[D.month] || {};
+    for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7 && (v.inst_n ? v.inst_sum / v.inst_n : 0) < 20000) add('sales', (v.n - v.do) * (v.inst_n ? v.inst_sum / v.inst_n : avg) * HORIZON * 0.5, `${fam}: ${v.n - v.do} of ${v.n} sales have no debit order`, 'half the value of the missing mandates');
+    if (C && C.cur) {
+      const cur = C.perCycle[C.cur]; const a = cur.agg; const q = queueFor(C, cur);
+      const saveRate = (a.saveRate != null ? a.saveRate : 15) / 100;
+      const rowVal = r => (inst[r.course] || avg) * HORIZON;
+      const unw = q.filter(r => !r.worked); if (unw.length) add('collections', unw.reduce((s, r) => s + rowVal(r), 0) * saveRate, `Assign the ${unw.length} unworked cancellation requests (oldest ${Math.max(...unw.map(r => r.age))} days)`, `value × ${Math.round(saveRate * 100)}% save rate`);
+      const old = q.filter(r => r.worked && r.age > 14); if (old.length) add('collections', old.reduce((s, r) => s + rowVal(r), 0) * saveRate, `Close the ${old.length} open ${old.length === 1 ? 'request' : 'requests'} older than 14 days`, `value × ${Math.round(saveRate * 100)}% save rate`);
+      const noAtt = q.filter(r => r.noAttempt); if (noAtt.length) add('collections', noAtt.reduce((s, r) => s + rowVal(r), 0) * saveRate, `${noAtt.length} assigned requests have no contact attempt yet`, `value × ${Math.round(saveRate * 100)}% save rate`);
+      // courses leaking cancellations
+      const byDept = {}; for (const r of cur.rows) if (r.course) byDept[r.course] = (byDept[r.course] || 0) + 1;
+      const sold = {}; for (const m of [D.prevMonth, D.month]) for (const v of Object.values((D.raw.course_months || {})[m] || {})) sold[v.dept] = (sold[v.dept] || 0) + v.n;
+      for (const [d, n] of Object.entries(byDept)) if (sold[d] >= 30 && n >= 5 && 100 * n / sold[d] > 8) add('leadership', n * (inst[d] || avg) * HORIZON, `${d}: ${n} cancellation requests = ${n1(100 * n / sold[d])} per 100 sales; find the cause (course, script or registrar)`, 'value of the requests');
+      // agents with low save rate and many cases
+      for (const ag of Object.values(a.byAgent)) if (ag.saved + ag.cancelled >= 15 && a.saveRate != null && 100 * ag.saved / (ag.saved + ag.cancelled) < a.saveRate - 5) add('collections', (a.saveRate / 100 - ag.saved / (ag.saved + ag.cancelled)) * ag.total * avg * HORIZON, `Coach ${ag.name}: save rate ${Math.round(100 * ag.saved / (ag.saved + ag.cancelled))}% vs team ${Math.round(a.saveRate)}% on ${ag.total} cases`, 'gap to team save rate');
+    }
+    if (D.raw.config_stale) {
+      // working days since the last recorded day, excluding today (data for today is never complete)
+      let missed = 0; const today = new Date(); today.setHours(0, 0, 0, 0);
+      for (let d = new Date(D.latest + 'T00:00:00'); ; ) { d.setDate(d.getDate() + 1); if (d >= today) break; const dow = d.getDay(); if (dow !== 0 && dow !== 6 && !HOLIDAYS.has(d.toISOString().slice(0, 10))) missed++; }
+      if (missed) add('leadership', missed * t.perDay * avg * HORIZON, `Connect this month's registration sheets: ${missed} working day${missed === 1 ? '' : 's'} of sales invisible since ${dShort(D.latest)}`, `${missed} day${missed === 1 ? '' : 's'} at the team rate`);
+    }
+    return A.sort((x, y) => y.impact - x.impact);
+  }
+  function actionsCard(D, C, scope) {
+    const all = actionsFor(D, C).filter(a => scope === 'leadership' || a.role === scope || a.role === 'leadership').slice(0, 3);
+    return el('div', { class: 'card actions' }, el('div', { class: 'card-head' }, el('h2', {}, 'Today’s three'), el('span', { class: 'xs muted' }, 'ranked by cash impact')),
+      all.length ? el('ol', { class: 'actions-list' }, all.map(a => el('li', {}, el('span', {}, a.text), el('span', { class: 'impact num' }, '≈ ' + randK(a.impact), el('span', { class: 'xs faint' }, ' · ' + a.why))))) : el('div', { class: 'empty' }, 'Nothing stands out today'),
+      el('p', { class: 'note' }, `Impact = students × average monthly instalment × ${HORIZON} months, discounted as noted. A ranking aid, not a forecast.`));
+  }
+
+  // Which 20% of cancellations hold most of the lost cash, and which salvage offers actually recover it.
+  function cancelParetoCard(D, C) {
+    if (!C || !C.cur) return null;
+    const cur = C.perCycle[C.cur]; const inst = avgInstByDept(D); const avg = inst._team || 600;
+    const val = r => (inst[r.course] || avg) * HORIZON;
+    const lost = cur.rows.filter(r => (r.status || '').toLowerCase() === 'cancel');
+    const totalLost = lost.reduce((s, r) => s + val(r), 0);
+    const group = key => { const g = {}; for (const r of lost) { const k = r[key] || 'not captured'; const o = g[k] ||= { name: k, n: 0, cash: 0 }; o.n++; o.cash += val(r); } return Object.values(g).sort((a, b) => b.cash - a.cash); };
+    const cats = group('category'); const courses = group('course');
+    let cum = 0; const catRows = cats.map(c => { cum += c.cash; return { ...c, share: pctN(c.cash, totalLost), cum: pctN(cum, totalLost) }; });
+    const offers = {}; for (const r of cur.rows) { const st = (r.status || '').toLowerCase(); if (st !== 'saved' && st !== 'cancel') continue; const k = r.offer || 'No offer made'; const o = offers[k] ||= { name: k, n: 0, saved: 0 }; o.n++; if (st === 'saved') o.saved++; }
+    const offerRows = Object.values(offers).map(o => ({ ...o, rate: pctN(o.saved, o.n) })).sort((a, b) => b.rate - a.rate);
+    const list = (rows, fmt) => el('div', { class: 'list tight' }, rows.map(r => el('div', { class: 'li' }, el('span', {}, r.name), el('span', { class: 'num muted' }, fmt(r)))));
+    return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Where the lost cash is'), el('span', { class: 'xs muted' }, `${n0(lost.length)} cancelled · ≈ ${randK(totalLost)} over ${HORIZON} months`)),
+      el('h3', {}, 'By reason'), list(catRows.slice(0, 6), r => `${n0(r.n)} · ${Math.round(r.share)}% of cash · cum ${Math.round(r.cum)}%`),
+      el('h3', { style: 'margin-top:12px' }, 'By course type'), list(courses.slice(0, 5), r => `${n0(r.n)} · ${randK(r.cash)}`),
+      el('h3', { style: 'margin-top:12px' }, 'Salvage offers that work'), list(offerRows.filter(o => o.n >= 3), r => `${Math.round(r.rate)}% saved of ${n0(r.n)}`),
+      el('p', { class: 'note' }, 'Cash uses the average instalment of the course type sold this and last month. Offer types are read from the free-text “Salvage Offer Made” column.'));
+  }
+
+  // Tests register: conversion per variant, lift and a two-proportion z-test (95%). Winner only when Done and reliable.
+  function testStats(t) {
+    const pa = t.a.n ? t.a.conv / t.a.n : null, pb = t.b.n ? t.b.conv / t.b.n : null;
+    if (pa == null || pb == null) return { pa, pb, z: null, reliable: false, lift: null };
+    const p = (t.a.conv + t.b.conv) / (t.a.n + t.b.n); const se = Math.sqrt(p * (1 - p) * (1 / t.a.n + 1 / t.b.n));
+    const z = se ? (pb - pa) / se : 0;
+    return { pa, pb, z, reliable: Math.abs(z) >= 1.96 && t.a.n >= 30 && t.b.n >= 30, lift: pa ? 100 * (pb - pa) / pa : null };
+  }
+  function testsCard(C, filterTypes) {
+    const wrap = (...kids) => el("section", { class: "card" }, ...kids);
+    const all = (C && C.raw.tests) || [];
+    const tests = filterTypes ? all.filter(t => filterTypes.test(t.type || '')) : all;
+    const url = C && C.raw.sources && C.raw.sources.tests ? `https://docs.google.com/spreadsheets/d/${C.raw.sources.tests.sheet}/edit` : null;
+    const head = el('div', { class: 'card-head' }, el('h2', {}, 'Tests'), el('span', { class: 'xs muted' }, url ? el('a', { href: url, target: '_blank', rel: 'noopener' }, 'open the register') : 'register not connected'));
+    if (!tests.length) return wrap(head, el('div', { class: 'empty' }, 'No tests logged yet. Add a row to the Tests register (mailer, SMS or call script, offer, price, deposit, debit date) with how many saw each variant and how many converted; the readout appears here the next morning.'));
+    const rows = tests.map(t => { const s = testStats(t); const done = /done|stopped/i.test(t.status || '');
+      const verdict = s.z == null ? 'no data yet' : done && s.reliable ? `${s.pb > s.pa ? t.b.name : t.a.name} wins` : s.reliable ? 'leading, not closed' : 'no reliable difference yet';
+      return { ...t, ...s, verdict, cls: s.z == null ? '' : done && s.reliable ? 'good' : s.reliable ? 'warn' : '' }; });
+    return wrap(head,
+      el('div', { class: 'table-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Test', 'Metric', 'A', 'B', 'Lift', 'Verdict', 'Status'].map((h, i) => el('th', { class: i >= 2 && i <= 4 ? 'num' : '' }, h)))),
+        el('tbody', {}, rows.map(r => el('tr', {}, el('td', {}, el('strong', {}, r.test), r.type ? el('span', { class: 'xs muted' }, ' · ' + r.type) : null), el('td', {}, r.metric || '–'),
+          el('td', { class: 'num' }, r.pa == null ? '–' : `${Math.round(100 * r.pa)}% (${n0(r.a.conv)}/${n0(r.a.n)})`), el('td', { class: 'num' }, r.pb == null ? '–' : `${Math.round(100 * r.pb)}% (${n0(r.b.conv)}/${n0(r.b.n)})`),
+          el('td', { class: 'num ' + (r.lift == null ? '' : r.lift > 0 ? 'good' : 'bad') }, r.lift == null ? '–' : `${r.lift > 0 ? '+' : ''}${Math.round(r.lift)}%`), el('td', {}, el('span', { class: r.cls }, r.verdict)), el('td', {}, r.status || '–')))))),
+      el('p', { class: 'note' }, 'B is compared with A. Reliable = two-proportion z-test at 95% with at least 30 in each variant. A winner is declared only once the test is marked Done.'));
+  }
+
   // ---------- views ----------
   function goalNote(g, goalMonth, D) {
     const mo = MONTHS[+goalMonth.slice(5, 7) - 1];
@@ -528,7 +686,8 @@
       goalPct = goalAtDay ? 100 * goalActual / goalAtDay : null;
     }
 
-    out.push(alertsCard(D, C, 'leadership'));
+    out.push(northStarCard(D, C));
+    out.push(el('section', { class: 'grid two' }, actionsCard(D, C, 'leadership'), alertsCard(D, C, 'leadership')));
     out.push(el('section', { class: 'grid kpis' },
       kpi(`Registrations · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`, n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of August pace' : 'no baseline'} · ${D.recorded} of ${D.workDays} days`, paceClass(t.pct)),
       kpi('Projected month end', n0(Math.round(t.projection)), `${n1(t.perDay)}/day · August pace ${n0(Math.round(t.augPerDay * D.workDays))}`, t.projection >= t.augPerDay * D.workDays ? 'good' : 'bad'),
@@ -570,6 +729,7 @@
     out.push(el('section', { class: 'grid three' }, c3, c4, freshnessCard(D, C)));
     out.push(courseEconomics(D, C));
     out.push(trendCard(D, C));
+    out.push(testsCard(C));
 
     requestAnimationFrame(() => {
       chart(cv1, { type: 'bar', data: { labels: D.monthDays.map(dShort), datasets: [
@@ -631,7 +791,9 @@
       el('h3', { style: 'margin:16px 0 8px' }, 'First payment due'),
       mixBar(LEAD_KEYS.map(k => t.m.lead[k]), LEAD_LABELS, LEAD_COLORS));
     const { card: trendCard, canvas: trendCv } = chartCard('Team registrations per day', 'this month · dashed = August pace');
-    out.push(el('section', { class: 'grid three' }, alertsCard(D, C, 'sales'), attentionCard, mixCard));
+    out.push(el('section', { class: 'grid three' }, actionsCard(D, C, 'sales'), alertsCard(D, C, 'sales'), attentionCard));
+    out.push(el('section', { class: 'grid two' }, paretoCard(D, C), mixCard));
+    out.push(testsCard(C, /mailer|sms|call|script|offer|price|deposit|landing|other|^$/i));
     out.push(el('section', { class: 'grid three' }, trendCard, incentiveExportCard(D), teamLinksCard(D)));
 
     // League table
@@ -644,6 +806,7 @@
       { key: 'pct', label: 'vs Aug', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: paceClass(v) }, Math.round(v) + '%') },
       { key: 'projection', label: 'Proj.', num: true, fmt: v => n0(Math.round(v)) },
       { key: 'quality', label: 'Quality', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: qualityClass(v) }, n0(v)) },
+      { key: 'expCash', label: '12-mo cash', num: true, fmt: v => randK(v) },
       { key: 'doRate', label: 'D/O', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' },
       { key: 'paidRate', label: 'Upfront', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' },
       { key: 'avgInst', label: 'Avg inst.', num: true, fmt: v => rand(v) },
@@ -653,12 +816,17 @@
       { key: 'incDO', label: 'D/O wk', num: true, fmt: v => v == null ? '–' : n0(v) },
       { key: 'incTotal', label: 'Incentive', num: true, fmt: v => v == null ? '–' : rand(v) },
     ];
-    const rows = people.map(p => { const cz = cur ? (cur.agg.bySales[firstName(p.name)] || {}).total || 0 : null; const q = qualityFor(p, cz || 0); return { ...p, cancels: cz, quality: q ? q.score : null, incDO: p.incentive ? p.incentive.debit_orders : null, incTotal: p.incentive ? p.incentive.total : null }; });
-    const filter = el('select', { onchange: e => { const v = e.target.value; tableHost.innerHTML = ''; tableHost.append(sortableTable(cols, v === 'all' ? rows : rows.filter(r => r.college === v), 'month', { rank: true })); } },
+    const czAll = cancelsByRegistrar(C);
+    const rows = people.map(p => { const cz = cur ? (cur.agg.bySales[firstName(p.name)] || {}).total || 0 : null; const q = qualityFor(p, czAll[firstName(p.name)] || 0); return { ...p, cancels: cz, quality: q ? q.score : null, expCash: expectedCash(p, czAll[firstName(p.name)]), incDO: p.incentive ? p.incentive.debit_orders : null, incTotal: p.incentive ? p.incentive.total : null }; });
+    let leagueCollege = 'all';
+    const redraw = () => { tableHost.innerHTML = ''; tableHost.append(sortableTable(cols, leagueCollege === 'all' ? rows : rows.filter(r => r.college === leagueCollege), S.leagueSort || 'month', { rank: true })); };
+    const filter = el('select', { onchange: e => { leagueCollege = e.target.value; redraw(); } },
       el('option', { value: 'all' }, 'All colleges'), Object.keys(D.colleges).filter(c => c !== 'Unknown').map(c => el('option', { value: c }, c)));
-    const tableHost = el('div', {}, sortableTable(cols, rows, 'month', { rank: true }));
-    out.push(el('section', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'League table'), el('div', { class: 'row' }, el('span', { class: 'xs muted' }, 'click a column to sort'), filter)), tableHost,
-      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'vs Aug = this month against each registrar’s August daily rate × recorded days. Proj. = current daily rate carried to month end. Cancel req. = cancellation requests this cycle on sales attributed to the registrar. D/O wk and Incentive come from the weekly incentive sheet. Quality (0–100, needs 10+ sales) = debit-order rate 35% + first payment within 7 days 25% + paid upfront 10% + cancellation index 30% (100 minus 10 per cancellation request per 100 sales over this and last month). Cancellation attribution uses the first name in the sheet, so shared first names (e.g. Christa) are merged.')));
+    const rankBy = el('div', { class: 'seg' }, [['month', 'Rank by sales'], ['expCash', 'Rank by 12-mo cash']].map(([k, lab]) => el('button', { class: 'btn' + ((S.leagueSort || 'month') === k ? ' on' : ''), onclick: () => { S.leagueSort = k; rankBy.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent === lab)); redraw(); } }, lab)));
+    const tableHost = el('div', {});
+    redraw();
+    out.push(el('section', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'League table'), el('div', { class: 'row' }, rankBy, filter)), tableHost,
+      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'vs Aug = this month against each registrar’s August daily rate × recorded days. Proj. = current daily rate carried to month end. Cancel req. = cancellation requests this cycle on sales attributed to the registrar. 12-mo cash = monthly instalments signed × 12 × (1 − cancellation rate this and last cycle, capped at 50%) + upfront cash: an estimate for ranking, not a forecast. D/O wk and Incentive come from the weekly incentive sheet. Quality (0–100, needs 10+ sales) = debit-order rate 35% + first payment within 7 days 25% + paid upfront 10% + cancellation index 30% (100 minus 10 per cancellation request per 100 sales over this and last month). Cancellation attribution uses the first name in the sheet, so shared first names (e.g. Christa) are merged.')));
     out.push(courseEconomics(D, C));
 
     requestAnimationFrame(() => {
@@ -765,7 +933,7 @@
     const stale = goalMonth && goalMonth < D.month;
     const fc = cashForecast(C);
 
-    out.push(alertsCard(D, C, 'collections'));
+    out.push(el('section', { class: 'grid two' }, actionsCard(D, C, 'collections'), alertsCard(D, C, 'collections')));
     out.push(el('section', { class: 'grid kpis' },
       kpi(goalMonth ? `Cash vs goal · ${MONTHS_LONG[+goalMonth.slice(5, 7) - 1]} cycle` : 'Cash vs goal', last ? pct(last.actual_cum, goalAtDay) : '–', last ? `${randK(last.actual_cum)} banked by day ${last.dom} vs ${randK(goalAtDay)} planned` : 'no data', stale ? 'bad' : last && last.actual_cum >= goalAtDay ? 'good' : 'warn'),
       kpi('Cycle cash forecast', fc ? randK(fc.total) : '–', fc ? `${randK(fc.actual)} by day ${fc.lastDom} · shape of ${fc.cycles} past cycles · goal ${randK(fc.goalTotal)}` : 'needs two completed cycles in the bank tabs', fc && fc.goalTotal ? (fc.total >= fc.goalTotal ? 'good' : fc.total >= 0.9 * fc.goalTotal ? 'warn' : 'bad') : ''),
@@ -792,9 +960,11 @@
       el('h3', { style: 'margin:16px 0 8px' }, 'By course type'),
       el('ul', { class: 'list' }, Object.entries(a.byCourse).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([k, v]) => el('li', {}, el('span', {}, k), el('span', { class: 'num' }, n0(v))))));
     const { card: c3, canvas: cv3 } = chartCard('Requests logged per day', 'this cycle');
-    out.push(el('section', { class: 'grid three' }, catCard, colCard, c3));
+    out.push(el('section', { class: 'grid two' }, cancelParetoCard(D, C), catCard));
+    out.push(el('section', { class: 'grid two' }, colCard, c3));
 
     out.push(queueCard(C, cur, 'Open requests · exceptions queue'));
+    out.push(testsCard(C, /sms|call|script|offer|debit|mailer|other|^$/i));
 
     // Agent table
     const agents = Object.values(a.byAgent).map(x => ({ ...x, decided: x.saved + x.cancelled, saveRate: pctN(x.saved, x.saved + x.cancelled), perCase: x.total ? x.attempts / x.total : 0, contactRate: pctN(x.contacts, x.attempts), offerRate: pctN(x.offers, x.total) }));

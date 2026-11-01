@@ -76,8 +76,44 @@ def main(sales, coll):
     if bank_latest < month: alerts.append(f"AMBER Collections Daily Goal sheet has no tabs for {datetime.date(int(month[:4]), int(month[5:]), 1).strftime('%B')} yet")
     unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
     if unrostered: alerts.append(f"AMBER {len(unrostered)} registrars selling but not on the comparison-sheet roster: {', '.join(sorted(unrostered))}")
+    # ---- today's three: actions ranked by estimated cash impact (students × avg instalment × 12 months) ----
+    H = 12
+    inst_sum = collections.Counter(); inst_n = collections.Counter()
+    for d in days.values():
+        for k, r in d.items(): inst_sum[k] += r.get('inst_sum') or 0; inst_n[k] += r.get('inst_n') or 0
+    team_avg = (sum(inst_sum.values()) / sum(inst_n.values())) if sum(inst_n.values()) else 600
+    avg_p = lambda k: (inst_sum[k] / inst_n[k]) if inst_n[k] else team_avg
+    acts = []
+    team_do = 100 * m_do / m_reg if m_reg else None
+    for k in active:
+        per_day = m_by_p[k] / recorded if recorded else 0
+        if per_day >= 2 and today.get(k, {}).get('reg', 0) == 0:
+            acts.append((per_day * avg_p(k) * H, f"Call {name(k)}: no sale {dl}, usually {per_day:.1f}/day"))
+        do_rate = 100 * m_do_p[k] / m_by_p[k]
+        if m_by_p[k] >= 15 and team_do is not None and do_rate < team_do - 15:
+            gap = round((team_do - do_rate) / 100 * m_by_p[k])
+            acts.append((gap * avg_p(k) * H * 0.5, f"Coach {name(k)} on debit orders: {do_rate:.0f}% vs team {team_do:.0f}% ({gap} sales without a mandate)"))
+    save_rate = (saved / (saved + canc)) if (saved + canc) else 0.15
+    if unproc:
+        oldest = max((ref - datetime.date.fromisoformat(r['logged'])).days for r in rows if not r.get('status'))
+        acts.append((unproc * team_avg * H * save_rate, f"Assign the {unproc} unworked cancellation requests (oldest {oldest} days)"))
+    if old_open: acts.append((old_open * team_avg * H * save_rate, f"Close the {old_open} open cancellation request{'s' if old_open != 1 else ''} older than 14 days"))
+    by_agent = collections.defaultdict(lambda: [0, 0, 0])
+    for r in rows:
+        if r.get('agent'):
+            a = by_agent[r['agent']]; a[2] += 1
+            if r.get('status') == 'Saved': a[0] += 1
+            elif r.get('status') == 'Cancel': a[1] += 1
+    for ag, (sv, cn, n) in by_agent.items():
+        if sv + cn >= 15 and (saved + canc) and sv / (sv + cn) < save_rate - 0.05:
+            acts.append(((save_rate - sv / (sv + cn)) * n * team_avg * H, f"Coach {ag}: save rate {100*sv/(sv+cn):.0f}% vs team {100*save_rate:.0f}% on {n} cases"))
+    acts.sort(key=lambda x: -x[0])
     L = []
     L.append(f"Every Sale Matters · highlights to {dl}")
+    L.append('')
+    L.append("TODAY'S THREE (ranked by estimated cash impact)")
+    for imp, txt in acts[:3]: L.append(f"- {txt} · ≈ R{imp/1e3:.0f}k")
+    if not acts: L.append('- Nothing stands out today')
     L.append('')
     L.append('ATTENTION' if alerts else 'ATTENTION: nothing flagged')
     for a in alerts[:8]: L.append('- ' + a)
