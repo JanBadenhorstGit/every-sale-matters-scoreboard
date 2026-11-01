@@ -157,6 +157,15 @@ def main(sales, coll, leads=None):
         if chs: L.append('- Best converting channels: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[:3]) + ' · weakest: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[-2:]))
         for f in LD.get('sources', {}).get('flags', []):
             L.append(f"- PLACEMENT LEAK {f['college'].split()[0]} {f['path'].split('/')[-1]}: {f['third_party_leads']:,} leads via third-party sites, {f['third_party_registered']} registered ({f['third_party_conv']}% vs {f['rest_conv']}% for the page's other traffic). Add placement exclusions in Google Ads.")
+        DM = (LD.get('demand') or {}).get('monthly', {}).get(month)
+        if DM:
+            e = n = r = 0; per_col = []
+            for col, cc in DM.items():
+                ce = sum(v['enquiries'] for v in cc.values()); cr = sum(v['repeat'] for v in cc.values())
+                e += ce; r += cr; n += sum(v['new'] for v in cc.values()); per_col.append((col.split()[0], ce, cr))
+            ds = (LD['demand'].get('sales') or {})
+            L.append(f"- True demand this month: {e:,} enquiries = {n:,} new contacts + {r:,} repeat enquiries ({100*r/max(1,e):.0f}% repeats) · " + ', '.join(f"{c} {ce:,} ({100*cr/max(1,ce):.0f}% repeat)" for c, ce, cr in sorted(per_col, key=lambda x: -x[1])))
+            if ds.get('total'): L.append(f"- Sales in the last {LD['window']['days']} days from people who enquired again: {ds['from_repeat_enquirers']:,} of {ds['total']:,} ({ds['pct']}%)")
         age = LD.get('lead_age_at_sale', {}).get(month, {}); at = sum(age.values())
         if at: L.append(f"- Sales from leads older than 30 days: {100*(age.get('31–90 days',0)+age.get('over 90 days',0))/at:.0f}% · no CRM enquiry found: {100*age.get('no lead found',0)/at:.0f}%")
         L.append('')

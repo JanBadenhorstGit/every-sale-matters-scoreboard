@@ -99,3 +99,17 @@ and Collections Agent, served from the same repository at `/v2/`.
 - Marketing view: "Lead quality by traffic source", "Top third-party referring sites" and "Placement leads per landing
   page" cards. Leadership Attention list and the digest ATTENTION/LEADS sections carry a "Placement leak" line while a
   page is flagged. First flag: the Skills Academy PMax page (744 third-party leads, 4 registered, 0.5% vs 1.2%).
+
+### v2.5 (1 Nov 2026): true demand, including repeat enquiries
+
+- Lead counts on the board were new CRM contacts only. A person who enquires again does not create a new contact, so
+  repeat enquiries (about a third of all submissions) were invisible. `pipeline_leads.py` now reads the entries into
+  each college's GF-list automation (Skills 4, Matric 111, Bellview 7615; one entry per form submission, double-fires
+  within 10 minutes collapsed) via `contactAutomations?filters[seriesid]&filters[adddate]`, cached per automation-day
+  in `sheets_private/ac/auto/`. A submission is "new" if the contact was created within 6 hours of it, otherwise
+  "repeat"; contacts behind repeats are fetched by id and cached per day.
+- `leads.json → demand`: daily and monthly enquiries / new / repeat per college and channel, repeat enquirers who
+  registered, weekly repeat share (a step marks a routing change), time since the returning person first entered the
+  CRM, and the share of the window's sales that came from repeat enquirers. `--no-demand` skips the pull.
+- Marketing view: "True demand" table, "Enquiries per day · new vs repeat" chart, an Enquiries column in the channel
+  funnel; the Leads KPI is relabelled "New leads". Digest LEADS section gains a "True demand" line.

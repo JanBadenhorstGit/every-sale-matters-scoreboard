@@ -76,6 +76,57 @@ def fetch_ids(ids):
     return out
 
 
+# v2.5: every enquiry (submission) enters the college's GF-list automation, whether the contact is new or
+# already in the CRM. Entries are therefore the "true demand" signal; contacts created = new enquirers only.
+DEMAND_AUTOMATIONS = {"4": "Skills Academy", "111": "Matric College", "7615": "Bellview Inst."}
+AUTO_RAW = RAW / "auto"
+DEDUPE_MIN = 10  # two entries for one contact within this many minutes = one submission (double-fire)
+
+
+def fetch_entries(sid: str, day: date):
+    """All entries into automation `sid` on `day` (day in the account's US-Central time; converted to SAST later)."""
+    rows, offset = [], 0
+    while True:
+        d = api("contactAutomations", limit=100, offset=offset, **{"filters[seriesid]": sid, "filters[adddate]": day.isoformat()})
+        page = d.get("contactAutomations", [])
+        rows += [{"c": x["contact"], "t": x["adddate"]} for x in page]
+        offset += 100
+        if len(page) < 100:
+            break
+    return rows
+
+
+def load_demand_entries(days, refetch_days=2):
+    """{(college, contact_id, sast_datetime)} for every submission in the window, cached per automation-day."""
+    AUTO_RAW.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(SAST).date()
+    fetch_days = sorted(set(days) | {min(days) - timedelta(days=1), today})  # account day straddles the SAST day
+    events = []
+    for sid, college in DEMAND_AUTOMATIONS.items():
+        for d in fetch_days:
+            f = AUTO_RAW / f"{sid}_{d.isoformat()}.json"
+            if f.exists() and (today - d).days > refetch_days:
+                rows = json.loads(f.read_text())
+            else:
+                rows = fetch_entries(sid, d)
+                f.write_text(json.dumps(rows, separators=(",", ":")))
+                print(f"fetched automation {sid} {d}: {len(rows)} entries", file=sys.stderr)
+            for r in rows:
+                t = ts(r["t"])
+                if t:
+                    events.append((college, r["c"], t))
+    # de-duplicate double-fires
+    events.sort(key=lambda e: (e[0], e[1], e[2]))
+    out, last = [], {}
+    for college, cid, t in events:
+        k = (college, cid)
+        if k in last and (t - last[k]).total_seconds() < DEDUPE_MIN * 60:
+            continue
+        last[k] = t
+        out.append((college, cid, t))
+    return out
+
+
 def strip(raw):
     """Reduce a raw API page to the fields we need, dropping names/emails. Phones are kept only in memory for matching."""
     fv = collections.defaultdict(dict); fvu = collections.defaultdict(dict)
@@ -241,6 +292,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=45)
     ap.add_argument("--refetch", type=int, default=10, help="re-fetch this many most recent days (field values change)")
+    ap.add_argument("--no-demand", action="store_true", help="skip the submissions (true demand) pull")
     a = ap.parse_args()
     RAW.mkdir(parents=True, exist_ok=True)
     today = datetime.now(SAST).date()
@@ -365,6 +417,91 @@ def main():
         if L["first_ref"]:
             attribution[L["first_ref"]][ch] += 1
 
+    # ---- v2.5 true demand: every submission (new contact or repeat enquiry), from the GF-list automation entries
+    demand = None
+    if not a.no_demand:
+        events = load_demand_entries(days)
+        print(f"demand events: {len(events)} submissions across {len(DEMAND_AUTOMATIONS)} automations", file=sys.stderr)
+        # contacts behind repeat enquiries are usually older than the window: fetch them by id, cached per submission day
+        need = collections.defaultdict(set)
+        events = [e for e in events if e[2].date().isoformat() >= window_from]
+        for college, cid, t in events:
+            if cid not in contacts:
+                need[t.date()].add(cid)
+        for d, ids in sorted(need.items()):
+            f = AUTO_RAW / f"contacts_{d.isoformat()}.json"
+            if f.exists() and (today - d).days > a.refetch:
+                raw = json.loads(f.read_text())
+            else:
+                raw = strip(fetch_ids(ids))
+                f.write_text(json.dumps(raw, separators=(",", ":")))
+                print(f"fetched {len(raw)} repeat-enquiry contacts for {d}", file=sys.stderr)
+            for cid, c in raw.items():
+                contacts.setdefault(cid, c)
+                if c["phone"]:
+                    by_phone[c["phone"]].append(cid)
+        sale_by_phone = collections.defaultdict(list)
+        for scid, s in sale_rows.items():
+            if s["phone"]:
+                sale_by_phone[s["phone"]].append(scid)
+
+        def sale_for(cid, c):
+            if cid in sale_rows:
+                return sale_rows[cid]
+            for scid in sale_by_phone.get(c["phone"] or "", []):
+                return sale_rows[scid]
+            return None
+
+        d_daily = collections.defaultdict(lambda: collections.defaultdict(lambda: {"enquiries": 0, "new": 0, "repeat": 0}))
+        d_monthly = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: {"enquiries": 0, "new": 0, "repeat": 0, "repeat_contacts": 0, "new_registered": 0, "repeat_registered": 0})))
+        repeat_seen = set(); repeat_sale_contacts = set(); gap_hist = collections.Counter(); classified = collections.Counter()
+        for college, cid, t in events:
+            dk = t.date().isoformat()
+            if dk < window_from:
+                continue
+            c = contacts.get(cid)
+            cd = ts(c["cdate"]) if c else None
+            is_new = bool(cd and abs((t - cd).total_seconds()) <= 6 * 3600)
+            k = classify(c) if c else None
+            ch = (k["channel"] if k else "Unknown")
+            dd = d_daily[dk][college]; mm = d_monthly[dk[:7]][college][ch]
+            dd["enquiries"] += 1; mm["enquiries"] += 1
+            sale = sale_for(cid, c) if c else None
+            sold_after = bool(sale and sale["d"] >= dk)
+            if is_new:
+                dd["new"] += 1; mm["new"] += 1; mm["new_registered"] += 1 if sold_after else 0; classified["new"] += 1
+            else:
+                dd["repeat"] += 1; mm["repeat"] += 1; classified["repeat" if cd else "repeat_unknown_contact"] += 1
+                if (dk[:7], college, cid) not in repeat_seen:
+                    repeat_seen.add((dk[:7], college, cid)); mm["repeat_contacts"] += 1
+                    mm["repeat_registered"] += 1 if sold_after else 0
+                if sold_after:
+                    repeat_sale_contacts.add(cid)
+                if cd:
+                    gap = (t.date() - cd.date()).days
+                    gap_hist["same week" if gap <= 7 else "8–30 days" if gap <= 30 else "1–3 months" if gap <= 90 else "3–12 months" if gap <= 365 else "over a year"] += 1
+        # how many of this window's sales came from people who re-enquired (vs brand-new leads vs no enquiry at all)
+        sales_total = len(sale_rows)
+        sales_repeat = sum(1 for scid, s in sale_rows.items() if scid in repeat_sale_contacts or any(o in repeat_sale_contacts for o in by_phone.get(s["phone"] or "", [])))
+        # weekly repeat share, so a routing change (e.g. "run once" automations) shows up as a step
+        weekly = collections.defaultdict(lambda: {"enquiries": 0, "repeat": 0})
+        for dk, cols in d_daily.items():
+            wk = date.fromisoformat(dk).isocalendar(); wkey = f"{wk[0]}-W{wk[1]:02d}"
+            for v in cols.values():
+                weekly[wkey]["enquiries"] += v["enquiries"]; weekly[wkey]["repeat"] += v["repeat"]
+        demand = {
+            "daily": d_daily, "monthly": d_monthly,
+            "weekly_repeat_share": {w: {**v, "repeat_pct": round(100 * v["repeat"] / v["enquiries"], 1) if v["enquiries"] else None} for w, v in sorted(weekly.items())},
+            "repeat_gap": dict(gap_hist),
+            "sales": {"total": sales_total, "from_repeat_enquirers": sales_repeat, "pct": round(100 * sales_repeat / sales_total, 1) if sales_total else None},
+            "classified": dict(classified),
+            "automations": {sid: col for sid, col in DEMAND_AUTOMATIONS.items()},
+            "note": "enquiries = entries into each college's GF-list automation (one per form submission, de-duplicated within 10 minutes); "
+                    "new = the contact was created within 6 hours of the submission; repeat = an existing contact enquired again. "
+                    "Channel for repeats is the contact's current source field, i.e. usually the latest submission. "
+                    "Lead counts elsewhere on this board count new contacts only.",
+        }
+
     def speed_block(xs, n_total, nev):
         return {"n": len(xs), "median_min": round(statistics.median(xs)) if xs else None, "p75_min": round(pctl(xs, 0.75)) if xs else None,
                 "within_1h_pct": round(100 * sum(1 for x in xs if x <= 60) / len(xs)) if xs else None,
@@ -408,6 +545,7 @@ def main():
         "registrars": {r: {**v, "conv_pct": round(100 * v["registered"] / v["leads"], 1) if v["leads"] else None,
                            "leads_per_sale": round(v["leads"] / v["registered"], 1) if v["registered"] else None} for r, v in regs.items() if v["leads"] >= 10},
         "sources": sources,
+        "demand": demand,
         "pools": pools, "stages": stages, "old_enquiries": old_re,
         "lead_age_at_sale": age_hist,
         "sale_link": {f"{m}": {how: n for (mm, how), n in link.items() if mm == m} for m in {mm for mm, _ in link}},
