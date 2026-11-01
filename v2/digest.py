@@ -56,8 +56,31 @@ def main(sales, coll):
     gl = datetime.date(int(gm[:4]), int(gm[5:]), 1).strftime('%b')
     name = lambda k: people.get(k, {}).get('name', k)
     dl = datetime.date.fromisoformat(latest).strftime('%a %-d %b')
+    # ---- attention (same rules as the board, abridged) ----
+    alerts = []
+    if S.get('config_stale'): alerts.append(f"RED  Registration data stops at {dl}: this month's sheets are not connected yet")
+    if pace is not None and pace < 80: alerts.append(f"{'RED ' if pace < 70 else 'AMBER'} Team at {pace:.0f}% of August pace")
+    if m_reg and 100 * m_do / m_reg < 85: alerts.append(f"AMBER Debit-order rate {100*m_do/m_reg:.0f}% this month")
+    if unproc > 20: alerts.append(f"RED  {unproc} cancellation requests logged but not yet worked")
+    ref = datetime.date.fromisoformat(latest)
+    open_rows = [r for r in rows if (r.get('status') or '').lower() not in ('saved', 'cancel')]
+    old_open = sum(1 for r in open_rows if (ref - datetime.date.fromisoformat(r['logged'])).days > 14)
+    if old_open: alerts.append(f"AMBER {old_open} open cancellation requests older than 14 days")
+    prev_key = sorted(cyc)[-2] if len(cyc) > 1 else None
+    if prev_key:
+        pr = cyc[prev_key]['rows']; ps = sum(1 for r in pr if r.get('status') == 'Saved'); pc = sum(1 for r in pr if r.get('status') == 'Cancel')
+        if ps + pc and saved + canc and 100 * saved / (saved + canc) < 100 * ps / (ps + pc) - 5:
+            alerts.append(f"RED  Save rate {100*saved/(saved+canc):.0f}% vs {100*ps/(ps+pc):.0f}% last cycle")
+    if last and last[2] and last[1] < 0.9 * last[2] and not last[3]: alerts.append(f"AMBER Cash behind goal: R{last[1]/1e6:.2f}m vs R{last[2]/1e6:.2f}m planned")
+    bank_latest = sorted(C['bank'])[-1]
+    if bank_latest < month: alerts.append(f"AMBER Collections Daily Goal sheet has no tabs for {datetime.date(int(month[:4]), int(month[5:]), 1).strftime('%B')} yet")
+    unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
+    if unrostered: alerts.append(f"AMBER {len(unrostered)} registrars selling but not on the comparison-sheet roster: {', '.join(sorted(unrostered))}")
     L = []
     L.append(f"Every Sale Matters · highlights to {dl}")
+    L.append('')
+    L.append('ATTENTION' if alerts else 'ATTENTION: nothing flagged')
+    for a in alerts[:8]: L.append('- ' + a)
     L.append('')
     L.append('SALES')
     L.append(f"- {dl}: {t_reg} registrations ({t_do} with debit orders)" + (' · ' + ', '.join(f"{c} {n}" for c, n in by_col_t.most_common()) if by_col_t else ''))
@@ -66,6 +89,11 @@ def main(sales, coll):
     L.append('- Top today: ' + ', '.join(f"{name(k)} {r['reg']}" for k, r in top_t))
     if zero_today: L.append(f"- Active registrars with no sale {dl}: " + ', '.join(name(k) for k in zero_today))
     if low_do: L.append('- Lowest debit-order rate this month: ' + ', '.join(f"{name(k)} {p:.0f}%" for k, p in low_do))
+    cm = (S.get('course_months') or {}).get(month) or {}
+    if cm:
+        dep = collections.Counter(); val = collections.Counter()
+        for v in cm.values(): dep[v['dept']] += v['n']; val[v['dept']] += v['inst_sum']
+        L.append('- By course type: ' + ', '.join(f"{d} {n:,} (R{val[d]/1e6:.2f}m/month signed)" for d, n in dep.most_common()))
     L.append('')
     L.append('COLLECTIONS')
     if last: L.append(f"- Cash vs goal (cycle from 8 {gl}): R{last[1]/1e6:.2f}m banked by {last[0]} {gl} vs R{last[2]/1e6:.2f}m planned" + (" (goal tab not filled past " + str([r['dom'] for r in g if r.get('actual_cum') is not None and not r.get('derived')][-1]) + f" {gl}; rest from bank tabs)" if last[3] else ''))

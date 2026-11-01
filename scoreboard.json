@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-31T11:59:22",
+ "generated_at": "2026-11-01T12:57:52",
  "latest_day": "2026-10-30",
  "month": "2026-10",
- "config_stale": false,
+ "config_stale": true,
  "month_recorded_days": 22,
  "aug_recorded_days": 20,
  "people": [

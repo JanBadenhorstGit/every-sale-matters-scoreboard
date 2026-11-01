@@ -40,3 +40,19 @@ and Collections Agent, served from the same repository at `/v2/`.
   script is run from a trusted machine or scheduled task, not from the public GitHub Action.
   No student names, numbers or phone numbers are written.
 - The Action refreshes `scoreboard.json` and `v2/data/sales.json` every 30 minutes in work hours (08:00–18:30 SAST, Mon–Fri).
+
+### v2.1 additions (1 Nov 2026)
+
+- **Attention card and email section**: automatic flags for data gaps, pace, debit-order rate, unworked or
+  ageing cancellation requests, save-rate drops, cash forecast below goal, course types with high cancellation
+  rates, registrars missing from the roster.
+- **Course economics**: sales, D/O rate, average instalment, monthly value signed and upfront cash per course
+  family; cancellation requests per 100 sales per course type (Matric, Provider, QCTO, ICB, Nated).
+- **Registrar quality score** (0–100): D/O rate 35%, first payment within 7 days 25%, paid upfront 10%,
+  cancellation index 30%. Shown in the league and on each agent page.
+- **Cash forecast**: cycle total projected from the average cumulative shape of completed cycles in the bank tabs.
+- **Exceptions queue**: open cancellation requests, oldest first, with age, agent, attempts and gaps.
+- **Month by month** history table; **personal page links** and **incentive CSV export** for managers.
+- `v2/discover_sheets.py` finds each month's Registration and incentive sheets by name in Drive, shares them
+  viewer-by-link and writes `month_sheets.json`, which `scoreboard_pipeline.py` merges into `MONTH_SHEETS`.
+  It runs in the private weekday-morning task together with the collections refresh.

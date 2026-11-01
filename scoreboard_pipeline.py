@@ -14,7 +14,7 @@ Counting rules (from the scoreboard / comparison report Method tab):
 - Christa and ChristaB are separate people; ClarenceB excluded.
 """
 
-import json
+import json, os
 import re
 import sys
 import urllib.request
@@ -43,6 +43,16 @@ MONTH_SHEETS = {
                 "incentive": "1Bb017mci3fYz7X_jj8m_Rhz8d6tzwU6P0_YyUdObzrw"},
 }
 COMPARISON_SHEET = "1j0DhPZkcBRQgGxKtbEOWNSKNXkqqhUh16BWgYeHTst8"  # roster + August baselines + Method
+
+# month_sheets.json is maintained by v2/discover_sheets.py (finds each month's sheets by name in Drive).
+# Entries there extend/override MONTH_SHEETS so new months need no code change.
+_MS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "month_sheets.json")
+if os.path.exists(_MS):
+    try:
+        for _k, _v in json.load(open(_MS)).get("months", {}).items():
+            MONTH_SHEETS.setdefault(_k, {}).update({a: b for a, b in _v.items() if b})
+    except Exception as _e:  # never let a bad config file stop the refresh
+        print(f"WARNING: could not read month_sheets.json: {_e}", file=sys.stderr)
 
 
 def pick_months(today=None):

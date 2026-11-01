@@ -148,6 +148,8 @@ def parse_day_tab(ws, tab_date):
         elif pargo:
             rec["pup"] += 1
         inst = parse_amount(v1.g(r, COL_FP_AMT))
+        if inst and inst > 20000:
+            inst = None  # a 6-figure 'monthly instalment' is a capture error (e.g. ID number in the amount column)
         rec["inst"][band(inst, INSTALMENT_BANDS)] += 1
         if inst:
             rec["inst_sum"] += inst
@@ -157,8 +159,72 @@ def parse_day_tab(ws, tab_date):
         rec["lead"][band(lead, LEADTIME_BANDS)] += 1
         course = re.sub(r"\s+", " ", str(v1.g(r, COL_COURSE)).strip())[:60]
         if course:
-            courses[course] = courses.get(course, 0) + 1
+            c = courses.setdefault(course, {"n": 0, "do": 0, "paid_n": 0, "paid_amt": 0.0,
+                                            "inst_sum": 0.0, "inst_n": 0, "college": current_college})
+            c["n"] += 1
+            c["do"] += 1 if str(v1.g(r, COL_DO)).strip().upper() == "X" else 0
+            if paid and paid > 0:
+                c["paid_n"] += 1
+                c["paid_amt"] += paid
+            if inst:
+                c["inst_sum"] += inst
+                c["inst_n"] += 1
     return recs, college_of, courses
+
+
+def course_family(name):
+    """Collapse messy course strings into (department, family, variant).
+
+    Departments match the Cancellation Track Sheet's course field: Matric, Provider, QCTO, ICB, Nated.
+    """
+    n = re.sub(r"\s+", " ", name).strip()
+    low = n.lower()
+    variant = None
+    for v, pat in (("4th Team", r"4th team"), ("1st Team", r"1st team"), ("S&R", r"s\s*&\s*r")):
+        if re.search(pat, low):
+            variant = v
+            break
+    m = re.search(r"\b(asc|nsc)\b.*?(20\d\d)", low)
+    if m:
+        return "Matric", f"{m.group(1).upper()} Matric {m.group(2)}", variant
+    if "matric" in low:
+        return "Matric", "Matric (other)", variant
+    if "icb" in low:
+        return "ICB", re.sub(r"\s*\(.*?\)\s*", " ", n).strip(" -"), variant
+    if "occupational certificate" in low or "qcto" in low:
+        fam = re.sub(r"^(qcto\s+)?(national |higher |advanced )?occupational certificate:\s*", "", n, flags=re.I)
+        toks = fam.strip()[:30].split()
+        while toks and (len(toks[-1]) <= 3 or toks[-1].lower() in ("practi", "practit", "pract")):
+            toks.pop()  # source strings are truncated; drop partial / joining words
+        return "QCTO", " ".join(toks), variant
+    if "national certificate" in low or re.search(r"\bn[4-6]\b", low) or "nated" in low:
+        return "Nated", re.sub(r"\s*\(.*?\)\s*", " ", n).strip(" -")[:40], variant
+    fam = re.sub(r"\s*\(.*?\)?\s*$", "", n)          # drop trailing "(Digital)" incl. truncated "("
+    fam = re.sub(r"\s*\(.*?\)\s*", " ", fam)            # drop other parentheticals
+    fam = re.sub(r"\s*[-–]\s*\(?\d+ ?(modules?|mo).*$", "", fam, flags=re.I)
+    fam = re.sub(r"\s+(comprehensive )?(certificate|course|certifi\w*)\b.*$", "", fam, flags=re.I)
+    fam = re.sub(r"\s+-\s+.*$", "", fam) if "short" not in low else fam
+    return "Provider", fam.strip(" -:,")[:40], variant
+
+
+def rollup_courses(courses):
+    """Monthly totals per course family from the per-day course detail."""
+    out = {}
+    for day, mix in courses.items():
+        month = day[:7]
+        for name, v in mix.items():
+            if not isinstance(v, dict):
+                v = {"n": v, "do": 0, "paid_n": 0, "paid_amt": 0.0, "inst_sum": 0.0, "inst_n": 0, "college": None}
+            dept, fam, variant = course_family(name)
+            f = out.setdefault(month, {}).setdefault(fam, {"dept": dept, "n": 0, "do": 0, "paid_n": 0, "paid_amt": 0.0,
+                                                            "inst_sum": 0.0, "inst_n": 0, "colleges": {}, "variants": {}})
+            for k in ("n", "do", "paid_n", "paid_amt", "inst_sum", "inst_n"):
+                f[k] += v.get(k, 0) or 0
+            if v.get("college"):
+                f["colleges"][v["college"]] = f["colleges"].get(v["college"], 0) + v["n"]
+            if variant:
+                f["variants"][variant] = f["variants"].get(variant, 0) + v["n"]
+    return out
 
 
 def load_reg_book(path):
@@ -238,6 +304,7 @@ def main():
         "unrostered": unrostered,
         "days": dict(sorted(days.items())),
         "courses": dict(sorted(courses.items())),
+        "course_months": rollup_courses(courses),
         "sources": source_status,
         "schema": {
             "inst_bands": {"lt400": "under R400", "b400_699": "R400–699", "b700_1499": "R700–1,499",
