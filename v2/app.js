@@ -397,9 +397,9 @@
       const q = queueFor(C, cur);
       const old = q.filter(r => r.age > 14).length; const noAgent = q.filter(r => r.noAgent).length; const noAtt = q.filter(r => r.noAttempt).length;
       if (a.unprocessed > 20) add('Collections', 'bad', `${n0(a.unprocessed)} cancellation requests logged but not yet worked (no status)`, 'collections');
-      if (old) add('Collections', 'warn', `${n0(old)} open requests older than 14 days`, 'collections');
-      if (noAgent) add('Collections', 'warn', `${n0(noAgent)} worked requests have no collections agent recorded`, 'collections');
-      if (noAtt) add('Collections', 'warn', `${n0(noAtt)} assigned requests have no contact attempt logged`, 'collections');
+      if (old) add('Collections', 'warn', `${n0(old)} open ${old === 1 ? 'request' : 'requests'} older than 14 days`, 'collections');
+      if (noAgent) add('Collections', 'warn', `${n0(noAgent)} worked ${noAgent === 1 ? 'request has' : 'requests have'} no collections agent recorded`, 'collections');
+      if (noAtt) add('Collections', 'warn', `${n0(noAtt)} assigned ${noAtt === 1 ? 'request has' : 'requests have'} no contact attempt logged`, 'collections');
       if (prev && a.saveRate != null && prev.saveRate != null && a.saveRate < prev.saveRate - 5) add('Collections', 'bad', `Save rate ${Math.round(a.saveRate)}% vs ${Math.round(prev.saveRate)}% last cycle`, 'collections');
       const f = cashForecast(C);
       if (f && f.goalTotal && f.total < 0.9 * f.goalTotal) add('Collections', 'warn', `Cycle cash forecast ${randK(f.total)} vs goal ${randK(f.goalTotal)}`, 'collections');
@@ -413,7 +413,7 @@
     const all = alertsFor(D, C);
     const list = all.filter(a => scope === 'leadership' || a.role === scope || a.role === 'leadership');
     return el('div', { class: 'card alerts' }, el('div', { class: 'card-head' }, el('h2', {}, 'Attention'), el('span', { class: 'xs muted' }, `${list.filter(a => a.sev === 'bad').length} red · ${list.filter(a => a.sev !== 'bad').length} amber`)),
-      list.length ? el('ul', { class: 'list' }, list.slice(0, 10).map(a => el('li', {}, el('span', {}, pill(a.area, a.sev), ' ', a.text)))) : el('div', { class: 'empty' }, 'Nothing needs attention'));
+      list.length ? el('ul', { class: 'list' }, list.map(a => el('li', {}, el('span', {}, pill(a.area, a.sev), ' ', a.text)))) : el('div', { class: 'empty' }, 'Nothing needs attention'));
   }
 
   function courseEconomics(D, C) {
