@@ -109,6 +109,30 @@ def ts(s):
         return None
 
 
+OWN_HOSTS = {"skillsacademy.co.za", "skillsacademy.edu.za", "matric.co.za", "bellview.co.za", "bellview.edu.za", "fet-college.co.za", "hsg_first_referrer"}
+SEARCH_HOSTS = {"googleads.g.doubleclick.net", "google.com", "google.co.za", "syndicatedsearch.goog", "bing.com", "duckduckgo.com", "yahoo.com", "search-dra.dt.dbankcloud.com"}
+SOCIAL_HINTS = ("facebook", "instagram", "youtube", "tiktok", "whatsapp", "linkedin", "t.co", "l.wl.co", "bit.ly")
+
+
+def ref_group(raw):
+    """(group, domain) for the CRM First Referrer. Groups: none, own, google-app, search, social, third-party."""
+    raw = (raw or "").strip().lower()
+    if not raw:
+        return "none", None
+    if raw.startswith("android-app://"):
+        return "google-app", raw[len("android-app://"):].split("/")[0][:60]
+    host = re.sub(r"^https?://(www\.)?", "", raw).split("/")[0].split("?")[0][:60]
+    if not host:
+        return "none", None
+    if host in OWN_HOSTS:
+        return "own", host
+    if host in SEARCH_HOSTS:
+        return "search", host
+    if any(h in host for h in SOCIAL_HINTS):
+        return "social", host
+    return "third-party", host
+
+
 def classify(c):
     """college, channel, registrar first name, allocation time, stage, stage time, landing path, old-enquiry flag."""
     college = None; channel = None; src_val = None
@@ -150,9 +174,10 @@ def classify(c):
         path = u.split("?")[0].rstrip("/")[:80] or None
     old = any(c["fields"].get(f) for f in OLD_ENQUIRY_FIELDS)
     first_ref = c["fields"].get(F_FIRST_REF)
+    rgroup, rdomain = ref_group(first_ref)
     is_lead = college is not None and (bool(src_val) or any(l in ENQUIRY_LISTS for l, _, _ in c["lists"]) or any(t in CHANNEL_TAGS for t, _ in c["tags"]))
     return {"college": college, "channel": channel or "Unknown", "registrar": registrar, "alloc_at": alloc_at, "stage": stage,
-            "stage_at": stage_at, "path": path, "old": old, "first_ref": (str(first_ref).strip()[:40] if first_ref else None), "is_lead": is_lead}
+            "stage_at": stage_at, "path": path, "old": old, "first_ref": (str(first_ref).strip()[:40] if first_ref else None), "ref_group": rgroup, "ref_domain": rdomain, "is_lead": is_lead}
 
 
 def load_sales():
@@ -291,6 +316,9 @@ def main():
     pools = collections.defaultdict(lambda: collections.defaultdict(lambda: {"d7_30": 0, "d30_plus": 0, "d0_7": 0}))
     stages = collections.defaultdict(collections.Counter)
     old_re = collections.Counter(); attribution = collections.defaultdict(collections.Counter)
+    src_group = collections.defaultdict(lambda: {"leads": 0, "registered": 0})
+    page_src = collections.defaultdict(lambda: collections.defaultdict(lambda: {"leads": 0, "registered": 0}))
+    tp_domains = collections.defaultdict(lambda: {"leads": 0, "registered": 0, "colleges": collections.Counter()})
     for L in leads.values():
         dk = L["cdate"].date().isoformat(); mk = dk[:7]; col = L["college"]; ch = L["channel"]
         d = daily[dk][col][ch]; m = monthly[mk][col][ch]
@@ -317,6 +345,12 @@ def main():
             never[col] += 1
         if L["path"]:
             p = pages[(col, L["path"])]; p["leads"] += 1; p["registered"] += 1 if L["sale"] else 0
+        g = L.get("ref_group") or "none"; sold = 1 if L["sale"] else 0
+        src_group[g]["leads"] += 1; src_group[g]["registered"] += sold
+        if L["path"]:
+            ps = page_src[(col, L["path"])][g]; ps["leads"] += 1; ps["registered"] += sold
+        if g == "third-party" and L.get("ref_domain"):
+            td = tp_domains[L["ref_domain"]]; td["leads"] += 1; td["registered"] += sold; td["colleges"][col.split()[0]] += 1
         if L["registrar"]:
             r = regs[L["registrar"]]; r["leads"] += 1
             if L["sale"]:
@@ -337,6 +371,32 @@ def main():
                 "within_24h_pct": round(100 * sum(1 for x in xs if x <= 1440) / len(xs)) if xs else None,
                 "never_allocated_pct": round(100 * nev / n_total) if n_total else None}
 
+    # ---- traffic-source quality: pages where third-party (display placement) leads convert far below the page's other traffic
+    src_pages = []
+    for (col, path), gs in page_src.items():
+        tot_l = sum(v["leads"] for v in gs.values()); tot_r = sum(v["registered"] for v in gs.values())
+        if tot_l < 200:
+            continue
+        tp = gs.get("third-party", {"leads": 0, "registered": 0})
+        rest_l = tot_l - tp["leads"]; rest_r = tot_r - tp["registered"]
+        tp_conv = 100 * tp["registered"] / tp["leads"] if tp["leads"] else None
+        rest_conv = 100 * rest_r / rest_l if rest_l else None
+        flag = bool(tp["leads"] >= 50 and tp_conv is not None and rest_conv and tp_conv < 0.5 * rest_conv)
+        src_pages.append({"college": col, "path": path, "leads": tot_l, "registered": tot_r,
+                          "groups": {g: v for g, v in gs.items()},
+                          "third_party_leads": tp["leads"], "third_party_registered": tp["registered"],
+                          "third_party_conv": round(tp_conv, 1) if tp_conv is not None else None,
+                          "rest_conv": round(rest_conv, 1) if rest_conv is not None else None, "flag": flag})
+    src_pages.sort(key=lambda x: (-x["flag"], -x["third_party_leads"]))
+    sources = {
+        "by_group": {g: {**v, "conv_pct": round(100 * v["registered"] / v["leads"], 1) if v["leads"] else None} for g, v in src_group.items()},
+        "pages": src_pages[:40],
+        "third_party_domains": sorted([{"domain": d, "leads": v["leads"], "registered": v["registered"], "colleges": dict(v["colleges"])}
+                                       for d, v in tp_domains.items() if v["leads"] >= 10], key=lambda x: -x["leads"])[:40],
+        "flags": [{"college": x["college"], "path": x["path"], "third_party_leads": x["third_party_leads"], "third_party_registered": x["third_party_registered"],
+                   "third_party_conv": x["third_party_conv"], "rest_conv": x["rest_conv"]} for x in src_pages if x["flag"]],
+        "groups_note": "none = no referrer (lead forms, apps that hide it); own = our sites; google-app = Google app/Discover/Gmail; search = Google/Bing incl. ad click-throughs; social; third-party = other websites, mostly display/PMax placements",
+    }
     payload = {
         "generated_at": datetime.now(SAST).isoformat(timespec="seconds"),
         "window": {"from": window_from, "to": (today - timedelta(days=1)).isoformat(), "days": a.days},
@@ -347,6 +407,7 @@ def main():
         "pages": sorted([{"college": c, "path": p, **v} for (c, p), v in pages.items()], key=lambda x: -x["leads"])[:60],
         "registrars": {r: {**v, "conv_pct": round(100 * v["registered"] / v["leads"], 1) if v["leads"] else None,
                            "leads_per_sale": round(v["leads"] / v["registered"], 1) if v["registered"] else None} for r, v in regs.items() if v["leads"] >= 10},
+        "sources": sources,
         "pools": pools, "stages": stages, "old_enquiries": old_re,
         "lead_age_at_sale": age_hist,
         "sale_link": {f"{m}": {how: n for (mm, how), n in link.items() if mm == m} for m in {mm for mm, _ in link}},

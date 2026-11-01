@@ -76,6 +76,8 @@ def main(sales, coll, leads=None):
         if ps + pc and saved + canc and 100 * saved / (saved + canc) < 100 * ps / (ps + pc) - 5:
             alerts.append(f"RED  Save rate {100*saved/(saved+canc):.0f}% vs {100*ps/(ps+pc):.0f}% last cycle")
     if last and last[2] and last[1] < 0.9 * last[2] and not last[3]: alerts.append(f"AMBER Cash behind goal: R{last[1]/1e6:.2f}m vs R{last[2]/1e6:.2f}m planned")
+    for f in ((LD or {}).get('sources', {}).get('flags', [])):
+        alerts.append(f"AMBER Placement leak: {f['college'].split()[0]} {f['path'].split('/')[-1]} · {f['third_party_leads']:,} third-party leads, {f['third_party_registered']} registered")
     bank_latest = sorted(C['bank'])[-1]
     if bank_latest < month: alerts.append(f"AMBER Collections Daily Goal sheet has no tabs for {datetime.date(int(month[:4]), int(month[5:]), 1).strftime('%B')} yet")
     unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
@@ -153,6 +155,8 @@ def main(sales, coll, leads=None):
         if w24 is not None: L.append(f"- Allocated to a registrar within 24 h: {w24:.0f}% (median " + ', '.join(f"{c.split()[0]} {v['median_min']/60:.0f} h" for c, v in sp.items() if v.get('median_min')) + ')')
         chs.sort(key=lambda x: -x[2])
         if chs: L.append('- Best converting channels: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[:3]) + ' · weakest: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[-2:]))
+        for f in LD.get('sources', {}).get('flags', []):
+            L.append(f"- PLACEMENT LEAK {f['college'].split()[0]} {f['path'].split('/')[-1]}: {f['third_party_leads']:,} leads via third-party sites, {f['third_party_registered']} registered ({f['third_party_conv']}% vs {f['rest_conv']}% for the page's other traffic). Add placement exclusions in Google Ads.")
         age = LD.get('lead_age_at_sale', {}).get(month, {}); at = sum(age.values())
         if at: L.append(f"- Sales from leads older than 30 days: {100*(age.get('31–90 days',0)+age.get('over 90 days',0))/at:.0f}% · no CRM enquiry found: {100*age.get('no lead found',0)/at:.0f}%")
         L.append('')

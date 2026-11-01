@@ -391,6 +391,8 @@
     if (unr.length) add('Sales', 'warn', `${unr.length} registrar${unr.length === 1 ? '' : 's'} selling but not on the comparison-sheet roster: ${unr.map(p => p.name).join(', ')}`, 'sales');
     const cm = (D.raw.course_months || {})[D.month] || {};
     for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7) add('Sales', 'warn', `${fam}: only ${pct(v.do, v.n)} of ${v.n} sales have a debit order`, 'sales');
+    // Marketing: display-placement leads that never register
+    for (const f of (((S.leads || {}).sources || {}).flags || [])) add('Marketing', 'warn', `${f.college.split(' ')[0]} ${f.path.split('/').pop()}: ${n0(f.third_party_leads)} leads from third-party placements, ${f.third_party_registered} registered (${n1(f.third_party_conv)}% vs ${n1(f.rest_conv)}% for the page's other traffic)`, 'leadership');
     // Collections
     if (C && C.cur) {
       const cur = C.perCycle[C.cur], a = cur.agg; const prev = C.prev ? C.perCycle[C.prev].agg : null;
@@ -592,6 +594,9 @@
         const conv = tot.reg / tot.leads; const val = (tot.n ? tot.inst / tot.n : avg) * HORIZON;
         if (sp.within_24h_pct != null && sp.within_24h_pct < 60) add('sales', (1 - sp.within_24h_pct / 100) * tot.leads * conv * val * 0.2, `${col}: only ${sp.within_24h_pct}% of leads reach a registrar within 24 h (median ${hrs(sp.median_min)})`, 'a fifth of the value of slow leads');
         if (sp.never_allocated_pct != null && sp.never_allocated_pct >= 10) add('sales', (sp.never_allocated_pct / 100) * tot.leads * conv * val * 0.5, `${col}: ${sp.never_allocated_pct}% of leads older than 3 days have no registrar`, 'half the value at the college conversion rate');
+      }
+      for (const f of ((L.sources || {}).flags || [])) {
+        add('marketing', f.third_party_leads * ((f.rest_conv || 0) - (f.third_party_conv || 0)) / 100 * avg * HORIZON, `${f.college.split(' ')[0]} ${f.path.split('/').pop()}: ${n0(f.third_party_leads)} leads via third-party sites converted at ${n1(f.third_party_conv)}% vs ${n1(f.rest_conv)}% for the rest; exclude those placements`, 'leads bought from display placements that never register still cost ad spend and registrar calls');
       }
     }
     if (C && C.cur) {
@@ -1146,6 +1151,24 @@
     out.push(el('section', { class: 'grid two' }, speedCard(L, 'college'), ageCard));
     out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Landing pages'), el('span', { class: 'xs muted' }, `top 25 pages by leads · last ${L.window.days} days`)), sortableTable(pcols, prow, 'leads'),
       el('p', { class: 'note' }, 'vs college = page conversion ÷ the college average. WhatsApp pages usually win; paid-landing pages with ▼ need a form or offer test (log it in the Tests register).')));
+    // traffic-source quality (referrer groups; flags display-placement leads that never register)
+    const SRC = L.sources || null;
+    if (SRC) {
+      const GL = { none: 'No referrer (lead forms)', search: 'Google / Bing', 'google-app': 'Google app · Discover · Gmail', social: 'Social', own: 'Our own sites', 'third-party': 'Third-party sites (placements)' };
+      const grows = Object.entries(SRC.by_group).map(([g, v]) => ({ group: GL[g] || g, leads: v.leads, registered: v.registered, conv: v.conv_pct }));
+      const gcols = [{ key: 'group', label: 'Where the visitor came from' }, { key: 'leads', label: 'Leads', num: true }, { key: 'registered', label: 'Registered', num: true }, { key: 'conv', label: 'Conversion', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }];
+      const srows = SRC.pages.filter(p => p.third_party_leads >= 30).map(p => ({ path: p.path, college: p.college, tp: p.third_party_leads, tpr: p.third_party_registered, tpc: p.third_party_conv, rest: p.rest_conv, flag: p.flag ? '▼ exclude' : '' }));
+      const scols = [{ key: 'path', label: 'Landing page' }, { key: 'college', label: 'College', fmt: v => v.split(' ')[0] }, { key: 'tp', label: 'Via 3rd-party', num: true }, { key: 'tpr', label: 'Registered', num: true }, { key: 'tpc', label: 'Their conv.', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'rest', label: 'Rest of page', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'flag', label: 'Flag' }];
+      const drows = (SRC.third_party_domains || []).slice(0, 15).map(d => ({ domain: d.domain, leads: d.leads, registered: d.registered, colleges: Object.entries(d.colleges).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(' · ') }));
+      const dcols = [{ key: 'domain', label: 'Referring site' }, { key: 'leads', label: 'Leads', num: true }, { key: 'registered', label: 'Registered', num: true }, { key: 'colleges', label: 'Colleges' }];
+      const flagNote = SRC.flags.length ? `${SRC.flags.length} page${SRC.flags.length > 1 ? 's' : ''} flagged: placement leads convert at under half the page's other traffic` : 'No page flagged: placement leads convert in line with other traffic.';
+      out.push(el('section', { class: 'grid two' },
+        el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Lead quality by traffic source'), el('span', { class: 'xs muted' }, `CRM first referrer · last ${L.window.days} days`)), sortableTable(gcols, grows, 'leads'),
+          el('p', { class: 'note' }, 'Third-party sites are display and Performance Max placements. Expect them to convert lower; the flag below fires only when they convert at less than half of the same page\'s other traffic.')),
+        el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Top third-party referring sites'), el('span', { class: 'xs muted' }, 'sites that sent 10+ leads')), sortableTable(dcols, drows, 'leads'),
+          el('p', { class: 'note' }, 'Job-listing and content-farm names here usually mean people who thought they were applying for a job. Exclude them in Google Ads (placement exclusions) and check the next refresh.'))));
+      out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Placement leads per landing page'), el('span', { class: 'xs muted', style: SRC.flags.length ? 'color:var(--bad)' : '' }, flagNote)), sortableTable(scols, srows, 'tp')));
+    }
     // pools + attribution
     const poolRows = []; for (const [col, chs] of Object.entries(L.pools)) for (const [ch, v] of Object.entries(chs)) if (v.d7_30 + v.d30_plus >= 20) poolRows.push({ college: col, channel: ch, d7_30: v.d7_30, d30_plus: v.d30_plus, total: v.d7_30 + v.d30_plus });
     const attrib = Object.entries(L.attribution || {}).map(([ref, chs]) => ({ ref: ref.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), ...chs, total: Object.values(chs).reduce((a, b) => a + b, 0) }));

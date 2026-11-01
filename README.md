@@ -89,3 +89,13 @@ and Collections Agent, served from the same repository at `/v2/`.
 - Caveats: allocation time uses the last change of the registrar field, so bulk re-allocation of old leads inflates it;
   "Old Enquiry" flags are set on nearly every contact and are therefore not used; the Sale Stage field only ever holds
   "Allocated" or "Won". Spend (Google Ads, Meta) is not joined yet, so no channel is red-flagged.
+
+### v2.4 (1 Nov 2026): lead quality by traffic source
+
+- `pipeline_leads.py` groups each lead's CRM First Referrer into none / own / google-app / search / social / third-party
+  and writes `leads.json → sources`: conversion per group, third-party referring domains (10+ leads), per-page
+  third-party vs rest-of-page conversion, and `flags` for pages with 50+ third-party leads converting at under half the
+  page's other traffic (display/PMax placements that generate form fills from job-bait and content-farm sites).
+- Marketing view: "Lead quality by traffic source", "Top third-party referring sites" and "Placement leads per landing
+  page" cards. Leadership Attention list and the digest ATTENTION/LEADS sections carry a "Placement leak" line while a
+  page is flagged. First flag: the Skills Academy PMax page (744 third-party leads, 4 registered, 0.5% vs 1.2%).
