@@ -196,3 +196,10 @@ footer { max-width: 1400px; margin: 0 auto; padding: var(--sp-5); color: var(--f
 .seg .btn.on { background: var(--accent, #f5b942); color: #111; border-color: transparent; }
 .list.tight .li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border, #1f2731); }
 @media (max-width: 900px) { .card.north { grid-template-columns: 1fr; } .card.north .north-drivers { grid-template-columns: 1fr 1fr; } .pareto-row { grid-template-columns: 1fr 1fr 1fr; } .pareto-row .names { display: none; } }
+
+/* v2.3 lead funnel */
+.funnel-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 6px; }
+.funnel-step .label { font-size: var(--text-xs, 12px); color: var(--muted, #9aa5b1); text-transform: uppercase; letter-spacing: .04em; }
+.funnel-step .value { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.funnel-step .progress { margin-top: 6px; }
+@media (max-width: 700px) { .funnel-steps { grid-template-columns: 1fr 1fr; } }

@@ -7,8 +7,12 @@ def load(path_or_url):
         return json.load(urllib.request.urlopen(path_or_url + ('&' if '?' in path_or_url else '?') + 'v=' + str(int(datetime.datetime.now().timestamp()))))
     return json.load(open(path_or_url))
 
-def main(sales, coll):
+def main(sales, coll, leads=None):
     S, C = load(sales), load(coll)
+    try:
+        LD = load(leads) if leads else None
+    except Exception:
+        LD = None
     age = (datetime.date.today() - datetime.date.fromisoformat(S['latest_day'])).days
     if age > 4:
         sys.exit(f"STALE: sales data ends {S['latest_day']} ({age} days ago, generated {S['generated_at']}); do not send the highlights")
@@ -136,9 +140,25 @@ def main(sales, coll):
     if cur: L.append(f"- Cancellation requests this cycle: {len(rows)} · {saved} saved, {canc} cancelled · save rate {100*saved/max(1,saved+canc):.0f}% · {unproc} logged but not yet worked · {logged_today} logged {dl}")
     if cat: L.append('- Main reasons: ' + ', '.join(f"{c} {n}" for c, n in cat))
     L.append('')
+    if LD and LD.get('monthly', {}).get(month):
+        L.append('LEADS')
+        tot = collections.Counter(); chs = []
+        for col, cc in LD['monthly'][month].items():
+            for ch, v in cc.items():
+                for k in ('leads', 'allocated', 'registered', 'do'): tot[k] += v[k]
+                if v['leads'] >= 100: chs.append((f"{col.split()[0]} {ch}", v['leads'], 100 * v['registered'] / v['leads']))
+        sp = LD.get('speed', {}).get('by_college', {})
+        n_all = sum(v['n'] for v in sp.values()); w24 = sum((v.get('within_24h_pct') or 0) * v['n'] for v in sp.values()) / n_all if n_all else None
+        L.append(f"- Leads created this month: {tot['leads']:,} · {100*tot['allocated']/max(1,tot['leads']):.0f}% allocated · {tot['registered']:,} registered ({100*tot['registered']/max(1,tot['leads']):.1f}%)")
+        if w24 is not None: L.append(f"- Allocated to a registrar within 24 h: {w24:.0f}% (median " + ', '.join(f"{c.split()[0]} {v['median_min']/60:.0f} h" for c, v in sp.items() if v.get('median_min')) + ')')
+        chs.sort(key=lambda x: -x[2])
+        if chs: L.append('- Best converting channels: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[:3]) + ' · weakest: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[-2:]))
+        age = LD.get('lead_age_at_sale', {}).get(month, {}); at = sum(age.values())
+        if at: L.append(f"- Sales from leads older than 30 days: {100*(age.get('31–90 days',0)+age.get('over 90 days',0))/at:.0f}% · no CRM enquiry found: {100*age.get('no lead found',0)/at:.0f}%")
+        L.append('')
     L.append('Full board: https://janbadenhorstgit.github.io/every-sale-matters-scoreboard/v2/')
     return L[0], '\n'.join(L[2:])
 
 if __name__ == '__main__':
-    a = sys.argv[1:] or ['v2/data/sales.json', 'v2/data/collections.json']
+    a = sys.argv[1:] or ['v2/data/sales.json', 'v2/data/collections.json', 'v2/data/leads.json']
     subj, body = main(*a); print(subj); print(); print(body)

@@ -58,7 +58,7 @@
   };
 
   // ---------- state ----------
-  const S = { role: 'leadership', who: null, sales: null, coll: null, charts: [] };
+  const S = { role: 'leadership', who: null, sales: null, coll: null, leads: null, charts: [] };
 
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
@@ -569,8 +569,8 @@
         el('span', { class: 'num ' + (s.cash >= 50 ? 'good' : s.cash < 15 ? 'bad' : '') }, `${Math.round(s.cash)}% of cash`),
         el('span', { class: 'xs faint names' }, lab === 'Bottom 50%' ? '' : s.names.slice(0, 4).join(', ') + (s.names.length > 4 ? ` +${s.names.length - 4}` : '')))));
     return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, '80/20'), el('span', { class: 'xs muted' }, 'this month · cash = expected 12-month value')),
-      block('Registrars', pr, 'registrars'), block('Course families', pc, 'families'),
-      el('p', { class: 'note' }, 'Cash = monthly instalments signed × 12 × (1 − cancellation rate) + upfront. Lead sources and channels join this table once the ActiveCampaign feed is connected.'));
+      block('Registrars', pr, 'registrars'), block('Course families', pc, 'families'), S.leads ? block('Lead channels', pareto(channelRows(S.leads, D.month), 'count', 'cash'), 'channels') : null,
+      el('p', { class: 'note' }, 'Cash = monthly instalments signed × 12 × (1 − cancellation rate) + upfront. Lead channels = college × source from the CRM; details on the Marketing view.'));
   }
 
   // Today's three: alerts and gaps ranked by estimated cash impact (12 months of instalments per student).
@@ -584,6 +584,16 @@
     // Sales: course families with low D/O
     const cm = (D.raw.course_months || {})[D.month] || {};
     for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7 && (v.inst_n ? v.inst_sum / v.inst_n : 0) < 20000) add('sales', (v.n - v.do) * (v.inst_n ? v.inst_sum / v.inst_n : avg) * HORIZON * 0.5, `${fam}: ${v.n - v.do} of ${v.n} sales have no debit order`, 'half the value of the missing mandates');
+    if (S.leads) {
+      const L = S.leads; const mm = L.monthly[D.month] || {};
+      for (const [col, chs] of Object.entries(mm)) {
+        const tot = Object.values(chs).reduce((o, v) => ({ leads: o.leads + v.leads, reg: o.reg + v.registered, inst: o.inst + v.inst_sum, n: o.n + v.inst_n }), { leads: 0, reg: 0, inst: 0, n: 0 });
+        const sp = (L.speed.by_college || {})[col]; if (!sp || !tot.leads) continue;
+        const conv = tot.reg / tot.leads; const val = (tot.n ? tot.inst / tot.n : avg) * HORIZON;
+        if (sp.within_24h_pct != null && sp.within_24h_pct < 60) add('sales', (1 - sp.within_24h_pct / 100) * tot.leads * conv * val * 0.2, `${col}: only ${sp.within_24h_pct}% of leads reach a registrar within 24 h (median ${hrs(sp.median_min)})`, 'a fifth of the value of slow leads');
+        if (sp.never_allocated_pct != null && sp.never_allocated_pct >= 10) add('sales', (sp.never_allocated_pct / 100) * tot.leads * conv * val * 0.5, `${col}: ${sp.never_allocated_pct}% of leads older than 3 days have no registrar`, 'half the value at the college conversion rate');
+      }
+    }
     if (C && C.cur) {
       const cur = C.perCycle[C.cur]; const a = cur.agg; const q = queueFor(C, cur);
       const saveRate = (a.saveRate != null ? a.saveRate : 15) / 100;
@@ -697,6 +707,7 @@
       kpi(cur ? `Cancellations · cycle from ${dShort(cur.start)}` : 'Cancellations', cur ? n0(cur.agg.total) : '–', cur ? `${n0(cur.agg.saved)} saved · ${cur.agg.saveRate != null ? Math.round(cur.agg.saveRate) + '% save rate' : ''} · ${n0(cur.agg.open + cur.agg.unprocessed)} open` : 'no data'),
     ));
 
+    if (S.leads) out.push(funnelStripCard(D, S.leads));
     // Charts: daily registrations stacked by college + August pace
     const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = August pace');
     const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
@@ -835,6 +846,7 @@
         { type: 'line', label: 'August pace', data: D.monthDays.map(() => t.augPerDay), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
       ] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
     });
+    if (S.leads) out.push(el('section', { class: 'grid two' }, speedCard(S.leads, 'registrar'), leadsPerSaleCard(S.leads)));
     return out;
   }
 
@@ -1069,8 +1081,89 @@
     return out;
   }
 
+  // ---------- v2.3: lead funnel (data/leads.json, aggregates only, from the CRM) ----------
+  const hrs = m => m == null ? '–' : m < 90 ? `${Math.round(m)} min` : m < 2880 ? `${n1(m / 60)} h` : `${n1(m / 1440)} days`;
+  function channelRows(L, month) {
+    const rows = [];
+    for (const [col, chs] of Object.entries(L.monthly[month] || {})) for (const [ch, v] of Object.entries(chs)) if (v.registered) rows.push({ name: `${col.split(' ')[0]} ${ch}`, count: v.registered, cash: v.inst_sum * HORIZON, leads: v.leads });
+    return rows;
+  }
+  function monthTotals(L, month) {
+    const t = { leads: 0, allocated: 0, registered: 0, do: 0, inst_sum: 0, inst_n: 0 };
+    for (const chs of Object.values(L.monthly[month] || {})) for (const v of Object.values(chs)) for (const k of Object.keys(t)) t[k] += v[k] || 0;
+    return t;
+  }
+  function funnelStripCard(D, L) {
+    const t = monthTotals(L, D.month); const link = L.sale_link[D.month] || {}; const age = L.lead_age_at_sale[D.month] || {};
+    const salesLinked = Object.values(link).reduce((a, b) => a + b, 0); const old = (age['31–90 days'] || 0) + (age['over 90 days'] || 0);
+    const steps = [['Leads', t.leads], ['Allocated', t.allocated], ['Registered', t.registered], ['Debit order', t.do]];
+    const max = t.leads || 1;
+    return el('div', { class: 'card funnel' }, el('div', { class: 'card-head' }, el('h2', {}, 'Lead funnel · ' + monthLabel(D.month)), el('span', { class: 'xs muted' }, `leads created this month in the CRM · window ${dShort(L.window.from)} – ${dShort(L.window.to)}`)),
+      el('div', { class: 'funnel-steps' }, steps.map(([lab, v], i) => el('div', { class: 'funnel-step' }, el('div', { class: 'label' }, lab), el('div', { class: 'value num' }, n0(v)), el('div', { class: 'xs muted' }, i === 0 ? '' : `${pct(v, steps[i - 1][1], 1)} of ${steps[i - 1][0].toLowerCase()}`), progress(v, max, i === steps.length - 1 ? 'good' : '')))),
+      el('p', { class: 'note' }, `Sales this month: ${n0(salesLinked)} · ${pct(old, salesLinked)} came from leads older than 30 days and ${pct(link.no_lead_found || 0, salesLinked)} had no enquiry in the CRM at all (walk-ins, referrals, re-enrolments). Lead-to-registration ${pct(t.registered, t.leads, 1)}.`));
+  }
+  function speedCard(L, mode) {
+    const src = mode === 'registrar' ? L.speed.by_registrar : L.speed.by_college;
+    const rows = Object.entries(src || {}).map(([k, v]) => ({ name: mode === 'registrar' ? k[0].toUpperCase() + k.slice(1) : k, ...v })).filter(r => r.n >= 10);
+    const cols = [{ key: 'name', label: mode === 'registrar' ? 'Registrar' : 'College' }, { key: 'n', label: 'Leads', num: true }, { key: 'median_min', label: 'Median wait', num: true, fmt: hrs }, { key: 'p75_min', label: '75% within', num: true, fmt: hrs }, { key: 'within_24h_pct', label: 'Within 24 h', num: true, fmt: v => v == null ? '–' : v + '%' }];
+    if (mode !== 'registrar') cols.push({ key: 'never_allocated_pct', label: 'No registrar', num: true, fmt: v => v == null ? '–' : v + '%' });
+    return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Speed to lead'), el('span', { class: 'xs muted' }, 'enquiry created → registrar assigned in the CRM · last ' + L.window.days + ' days')),
+      rows.length ? sortableTable(cols, rows, 'median_min', { rank: mode === 'registrar' }) : el('div', { class: 'empty' }, 'no data'),
+      el('p', { class: 'note' }, mode === 'registrar' ? 'Wait is measured on the leads each registrar received; it reflects the allocation process, not the registrar. A median in days means that registrar mostly receives old leads re-allocated in bulk. Registrars with fewer than 10 allocated leads are hidden.' : 'No registrar = leads older than 3 days still unallocated. Wait uses the last change of the registrar field, so bulk re-allocations of old leads inflate it. Benchmark: contact within 5 minutes converts far better than within a day.'));
+  }
+  function leadsPerSaleCard(L) {
+    const rows = Object.entries(L.registrars || {}).map(([k, v]) => ({ name: k[0].toUpperCase() + k.slice(1), ...v })).filter(r => r.leads >= 30 && r.conv_pct != null && r.conv_pct < 60);
+    return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Allocated leads per sale'), el('span', { class: 'xs muted' }, 'CRM leads allocated in the window vs those that registered')),
+      rows.length ? sortableTable([{ key: 'name', label: 'Registrar' }, { key: 'leads', label: 'Leads', num: true }, { key: 'registered', label: 'Registered', num: true }, { key: 'conv_pct', label: 'Conversion', num: true, fmt: v => v == null ? '–' : v + '%' }, { key: 'leads_per_sale', label: 'Per sale', num: true, fmt: v => v == null ? '–' : n1(v) }], rows, 'conv_pct', { rank: true }) : el('div', { class: 'empty' }, 'no data'),
+      el('p', { class: 'note' }, 'Low conversion with many leads = dead-lead effort; check lead quality for that registrar before coaching. Registrars whose CRM field is only set at enrolment are hidden (fewer than 30 leads or conversion above 60%).'));
+  }
+  function viewMarketing(D, C) {
+    const L = S.leads; const out = [];
+    if (!L) { out.push(el('div', { class: 'empty' }, 'No lead data yet. The CRM funnel refresh has not published data/leads.json.')); return out; }
+    const t = monthTotals(L, D.month); const sp = L.speed.by_college || {};
+    const allLeads = Object.values(sp).reduce((a, v) => a + v.n, 0); const w24 = Object.values(sp).reduce((a, v) => a + (v.within_24h_pct || 0) * v.n, 0);
+    const pools = { d7_30: 0, d30_plus: 0 }; for (const chs of Object.values(L.pools)) for (const v of Object.values(chs)) { pools.d7_30 += v.d7_30; pools.d30_plus += v.d30_plus; }
+    out.push(el('section', { class: 'grid kpis' },
+      kpi('Leads · ' + MONTHS_LONG[+D.month.slice(5, 7) - 1], n0(t.leads), `${pct(t.allocated, t.leads)} allocated to a registrar`),
+      kpi('Lead → registration', pct(t.registered, t.leads, 1), `${n0(t.registered)} registered · ${pct(t.do, t.registered)} with debit order`, t.registered / (t.leads || 1) >= 0.04 ? 'good' : 'warn'),
+      kpi('Allocated within 24 h', allLeads ? Math.round(w24 / allLeads) + '%' : '–', 'enquiry → registrar in the CRM', allLeads && w24 / allLeads < 60 ? 'bad' : ''),
+      kpi('Unconverted leads', n0(pools.d7_30 + pools.d30_plus), `${n0(pools.d7_30)} aged 7–30 days · ${n0(pools.d30_plus)} older`),
+    ));
+    // funnel per college × channel
+    const rows = [];
+    for (const [col, chs] of Object.entries(L.monthly[D.month] || {})) for (const [ch, v] of Object.entries(chs)) if (v.leads >= 20) rows.push({ college: col, channel: ch, leads: v.leads, allocPct: pctN(v.allocated, v.leads), registered: v.registered, conv: pctN(v.registered, v.leads), doPct: pctN(v.do, v.registered), inst: v.inst_n ? v.inst_sum / v.inst_n : null, cash: v.inst_sum * HORIZON });
+    const fcols = [{ key: 'college', label: 'College' }, { key: 'channel', label: 'Channel' }, { key: 'leads', label: 'Leads', num: true }, { key: 'allocPct', label: 'Allocated', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'registered', label: 'Registered', num: true }, { key: 'conv', label: 'Conversion', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'doPct', label: 'D/O', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'inst', label: 'Avg instalment', num: true, fmt: rand }, { key: 'cash', label: '12-mo value', num: true, fmt: randK }];
+    out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Funnel by college and channel'), el('span', { class: 'xs muted' }, monthLabel(D.month) + ' · leads created this month')), sortableTable(fcols, rows, 'leads'),
+      el('p', { class: 'note' }, 'Spend is not in this table yet, so no channel is marked a loser; once Google Ads and Meta spend are joined, a channel whose cost per paying student exceeds its 12-month value is red-flagged here.')));
+    // landing pages + lead age at sale
+    const colConv = {}; for (const [col, chs] of Object.entries(L.monthly[D.month] || {})) { let l = 0, r = 0; for (const v of Object.values(chs)) { l += v.leads; r += v.registered; } colConv[col] = l ? r / l : 0; }
+    const prow = L.pages.filter(p => p.leads >= 50).slice(0, 25).map(p => ({ ...p, conv: pctN(p.registered, p.leads), vs: colConv[p.college] ? 100 * p.registered / p.leads / (100 * colConv[p.college]) : null }));
+    const pcols = [{ key: 'path', label: 'Landing page' }, { key: 'college', label: 'College', fmt: v => v.split(' ')[0] }, { key: 'leads', label: 'Leads', num: true }, { key: 'registered', label: 'Registered', num: true }, { key: 'conv', label: 'Conversion', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'vs', label: 'vs college', num: true, fmt: v => v == null ? '–' : (v >= 1.2 ? '▲ ' : v < 0.7 ? '▼ ' : '') + n1(v) + '×' }];
+    const ageOrder = ['same day', '1–7 days', '8–30 days', '31–90 days', 'over 90 days', 'no lead found'];
+    const age = L.lead_age_at_sale[D.month] || {}; const ageTot = ageOrder.reduce((a, k) => a + (age[k] || 0), 0);
+    const { card: ageCard, canvas: ageCv } = chartCard('Lead age at sale', `${monthLabel(D.month)} · how old was the enquiry when the student registered`, 'short');
+    ageCard.append(el('p', { class: 'note' }, `${pct((age['31–90 days'] || 0) + (age['over 90 days'] || 0), ageTot)} of this month's sales came from leads older than 30 days: the re-engagement pool is worth working. "No lead found" = the sale's CRM contact has no enquiry record in the ${L.window.days}-day window (walk-ins, referrals, re-enrolments, or leads older than the window).`));
+    out.push(el('section', { class: 'grid two' }, speedCard(L, 'college'), ageCard));
+    out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Landing pages'), el('span', { class: 'xs muted' }, `top 25 pages by leads · last ${L.window.days} days`)), sortableTable(pcols, prow, 'leads'),
+      el('p', { class: 'note' }, 'vs college = page conversion ÷ the college average. WhatsApp pages usually win; paid-landing pages with ▼ need a form or offer test (log it in the Tests register).')));
+    // pools + attribution
+    const poolRows = []; for (const [col, chs] of Object.entries(L.pools)) for (const [ch, v] of Object.entries(chs)) if (v.d7_30 + v.d30_plus >= 20) poolRows.push({ college: col, channel: ch, d7_30: v.d7_30, d30_plus: v.d30_plus, total: v.d7_30 + v.d30_plus });
+    const attrib = Object.entries(L.attribution || {}).map(([ref, chs]) => ({ ref: ref.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), ...chs, total: Object.values(chs).reduce((a, b) => a + b, 0) }));
+    const chKeys = [...new Set(attrib.flatMap(a => Object.keys(a).filter(k => !['ref', 'total'].includes(k))))].slice(0, 4);
+    out.push(el('section', { class: 'grid two' },
+      el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Re-engagement pools'), el('span', { class: 'xs muted' }, 'leads in the window that have not registered')), sortableTable([{ key: 'college', label: 'College', fmt: v => v.split(' ')[0] }, { key: 'channel', label: 'Channel' }, { key: 'd7_30', label: '7–30 days', num: true }, { key: 'd30_plus', label: '30+ days', num: true }, { key: 'total', label: 'Total', num: true }], poolRows, 'total'),
+        el('p', { class: 'note' }, 'Counts only; names stay in the CRM. A re-engagement campaign for the 30+ pool is a Tests-register candidate: expose half, hold half.')),
+      el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'First touch vs lead source'), el('span', { class: 'xs muted' }, 'CRM "First Referrer" × source field · multi-touch view')), sortableTable([{ key: 'ref', label: 'First referrer' }, ...chKeys.map(k => ({ key: k, label: k, num: true, fmt: v => v == null ? '' : n0(v) })), { key: 'total', label: 'Total', num: true }], attrib, 'total'),
+        el('p', { class: 'note' }, 'Rows where the first referrer is Google but the source is Facebook (or the reverse) show channels assisting each other; judge channels on the pair, not on last click alone.'))));
+    requestAnimationFrame(() => {
+      chart(ageCv, { type: 'bar', data: { labels: ageOrder, datasets: [{ label: 'Sales', data: ageOrder.map(k => age[k] || 0), backgroundColor: ageOrder.map(k => k === 'no lead found' ? '#3a4552' : /31|over/.test(k) ? '#f5b942' : '#4da3ff'), borderRadius: 4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+    });
+    out.push(el('p', { class: 'note' }, `Lead data refreshed ${timeAgo(L.generated_at)} from the CRM (aggregates only; no names, numbers or IDs are published). Lead month = date the enquiry was created; registrations are matched by CRM ID, with phone as a fallback.`));
+    return out;
+  }
+
   // ---------- shell ----------
-  const VIEWS = { leadership: viewLeadership, 'sales-manager': viewSalesManager, 'sales-agent': viewSalesAgent, 'collections-manager': viewCollectionsManager, 'collections-agent': viewCollectionsAgent };
+  const VIEWS = { leadership: viewLeadership, 'sales-manager': viewSalesManager, 'sales-agent': viewSalesAgent, 'collections-manager': viewCollectionsManager, 'collections-agent': viewCollectionsAgent, marketing: viewMarketing };
 
   function render() {
     const D = S.sales, C = S.coll;
@@ -1097,10 +1190,11 @@
 
   async function load() {
     const bust = `?v=${Math.floor(Date.now() / 60000)}`;
-    const [salesRes, collRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null)]);
+    const [salesRes, collRes, leadsRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null), fetch('data/leads.json' + bust).catch(() => null)]);
     if (!salesRes.ok) throw new Error('sales.json ' + salesRes.status);
     const sales = await salesRes.json();
     const coll = collRes && collRes.ok ? await collRes.json() : null;
+    S.leads = leadsRes && leadsRes.ok ? await leadsRes.json() : null;
     S.sales = buildSales(sales);
     S.coll = buildCollections(coll);
     $('#asof').textContent = `Data to ${dDow(S.sales.latest)} ${dShort(S.sales.latest)} · refreshed ${timeAgo(sales.generated_at)}`;
