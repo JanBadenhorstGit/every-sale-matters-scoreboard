@@ -120,3 +120,21 @@ and Collections Agent, served from the same repository at `/v2/`.
   CRM, and the share of the window's sales that came from repeat enquirers. `--no-demand` skips the pull.
 - Marketing view: "True demand" table, "Enquiries per day · new vs repeat" chart, an Enquiries column in the channel
   funnel; the Leads KPI is relabelled "New leads". Digest LEADS section gains a "True demand" line.
+
+### v2.6 — ad spend in the channel funnel (`v2/data/ads.json`)
+
+`v2/data/ads.json` holds monthly ad spend per college and channel: `PPC` from the Google Ads API
+(campaign report segmented by date; Skills 8596839047, Matric 4364796192, Bellview 6903639633) and
+`Facebook` from the Meta Marketing API (account-level amount spent; Skills from the
+"Skills_Academy_Backup" account, Bellview 562792675051629; the Matric College account is not yet
+readable through the API). The Marketing view's "Funnel by college and channel" table adds Ad spend,
+cost per enquiry, cost per registration (red when above the 12-month value of a registration on that
+channel, amber above half of it) and value ÷ spend; "Today's three" raises a marketing action when a
+channel's spend exceeds the value it bought. The file is refreshed by a trusted task, not by the
+public GitHub Action. When the current month has fewer than 5 registrations on every channel the
+table shows the last full month.
+
+GCLID check (2 Nov 2026): the CRM has no GCLID field. The "Source Page" field keeps the landing-page
+path with its query string, which includes a full `gclid` for roughly one in ten recent values and
+only on the newer landing pages, so an offline-conversion feed to Google Ads is not viable until every
+form stores the gclid (hidden field) on submission.

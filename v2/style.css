@@ -91,7 +91,9 @@ main { max-width: 1400px; margin: 0 auto; padding: var(--sp-5); display: grid; g
 .dot.skills { background: var(--skills); } .dot.bellview { background: var(--bellview); } .dot.matric { background: var(--matric); }
 
 /* Tables */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.table-wrap.dense thead th, .table-wrap.dense tbody td { padding-left: 6px; padding-right: 6px; }
+.table-wrap.dense thead th { letter-spacing: 0.02em; }
 table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 thead th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; user-select: none; }
 thead th.num, td.num { text-align: right; }

@@ -598,6 +598,12 @@
         if (sp.within_24h_pct != null && sp.within_24h_pct < 60) add('sales', (1 - sp.within_24h_pct / 100) * tot.leads * conv * val * 0.2, `${col}: only ${sp.within_24h_pct}% of leads reach a registrar within 24 h (median ${hrs(sp.median_min)})`, 'a fifth of the value of slow leads');
         if (sp.never_allocated_pct != null && sp.never_allocated_pct >= 10) add('sales', (sp.never_allocated_pct / 100) * tot.leads * conv * val * 0.5, `${col}: ${sp.never_allocated_pct}% of leads older than 3 days have no registrar`, 'half the value at the college conversion rate');
       }
+      const AM = S.ads && S.ads.monthly ? S.ads.monthly[D.month] : null;
+      if (AM) for (const [col, chs] of Object.entries(mm)) for (const [ch, v] of Object.entries(chs)) {
+        const a = (AM[col] || {})[ch]; if (!a || a.cost < 5000 || !v.registered) continue;
+        const perReg = v.inst_sum * HORIZON / v.registered, cpr = a.cost / v.registered;
+        if (cpr > perReg) add('marketing', a.cost - v.registered * perReg, `${col.split(' ')[0]} ${ch}: ${rand(cpr)} of ad spend per registration vs ${rand(perReg)} 12-month value; cut or re-target`, 'spend above the 12-month value of the registrations it bought');
+      }
       for (const f of ((L.sources || {}).flags || [])) {
         add('marketing', f.third_party_leads * ((f.rest_conv || 0) - (f.third_party_conv || 0)) / 100 * avg * HORIZON, `${f.college.split(' ')[0]} ${f.path.split('/').pop()}: ${n0(f.third_party_leads)} leads via third-party sites converted at ${n1(f.third_party_conv)}% vs ${n1(f.rest_conv)}% for the rest; exclude those placements`, 'leads bought from display placements that never register still cost ad spend and registrar calls');
       }
@@ -1155,13 +1161,28 @@
       out.push(dcard); out.push(dchart);
     }
     // funnel per college × channel
-    const rows = [];
-    for (const [col, chs] of Object.entries(L.monthly[D.month] || {})) for (const [ch, v] of Object.entries(chs)) if (v.leads >= 20) rows.push({ college: col, channel: ch, enquiries: DM ? ((DMm[col] || {})[ch] || {}).enquiries || null : null, leads: v.leads, allocPct: pctN(v.allocated, v.leads), registered: v.registered, conv: pctN(v.registered, v.leads), doPct: pctN(v.do, v.registered), inst: v.inst_n ? v.inst_sum / v.inst_n : null, cash: v.inst_sum * HORIZON });
+    const funnelRows = (month) => { const rows = [];
+    const ADS = S.ads && S.ads.monthly ? S.ads.monthly[month] || {} : null;
+    const DMm2 = DM ? (DM.monthly || {})[month] || {} : {};
+    for (const [col, chs] of Object.entries(L.monthly[month] || {})) for (const [ch, v] of Object.entries(chs)) if (v.leads >= 20) {
+      const a = ADS && ADS[col] && ADS[col][ch]; const spend = a ? a.cost : null; const enq = DM ? ((DMm2[col] || {})[ch] || {}).enquiries || null : null;
+      const cash = v.inst_sum * HORIZON; const perReg = v.registered ? cash / v.registered : null;
+      rows.push({ college: col, channel: ch, enquiries: enq, leads: v.leads, allocPct: pctN(v.allocated, v.leads), registered: v.registered, conv: pctN(v.registered, v.leads), doPct: pctN(v.do, v.registered), inst: v.inst_n ? v.inst_sum / v.inst_n : null, cash,
+        spend, cpl: spend != null && (enq || v.leads) ? spend / (enq || v.leads) : null, cpr: spend != null && v.registered ? spend / v.registered : null, perReg, roi: spend ? cash / spend : null });
+    }
+    return rows; };
+    let fMonth = D.month, rows = funnelRows(D.month);
+    if (!rows.some(r => r.registered >= 5) && D.prevMonth && L.monthly[D.prevMonth]) { fMonth = D.prevMonth; rows = funnelRows(D.prevMonth); }
+    const hasSpend = rows.some(r => r.spend != null);
     const fcols = [{ key: 'college', label: 'College' }, { key: 'channel', label: 'Channel' }];
     if (DM) fcols.push({ key: 'enquiries', label: 'Enquiries', num: true, fmt: v => v == null ? '–' : n0(v) });
-    fcols.push({ key: 'leads', label: DM ? 'New leads' : 'Leads', num: true }, { key: 'allocPct', label: 'Allocated', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'registered', label: 'Registered', num: true }, { key: 'conv', label: 'Conversion', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'doPct', label: 'D/O', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'inst', label: 'Avg instalment', num: true, fmt: rand }, { key: 'cash', label: '12-mo value', num: true, fmt: randK });
-    out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Funnel by college and channel'), el('span', { class: 'xs muted' }, monthLabel(D.month) + (DM ? ' · enquiries incl. repeats; funnel on new leads' : ' · leads created this month'))), sortableTable(fcols, rows, 'leads'),
-      el('p', { class: 'note' }, (DM ? 'Enquiries = all submissions on the channel this month (repeats carry the channel of their latest enquiry). Allocation and conversion are measured on new leads. ' : '') + 'Spend is not in this table yet, so no channel is marked a loser; once Google Ads and Meta spend are joined, a channel whose cost per paying student exceeds its 12-month value is red-flagged here.')));
+    fcols.push({ key: 'leads', label: DM ? 'New leads' : 'Leads', num: true }, { key: 'allocPct', label: 'Alloc.', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'registered', label: 'Reg.', num: true }, { key: 'conv', label: 'Conv.', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }, { key: 'doPct', label: 'D/O', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' }, { key: 'inst', label: 'Avg inst.', num: true, fmt: rand }, { key: 'cash', label: '12-mo value', num: true, fmt: randK });
+    if (hasSpend) fcols.push({ key: 'spend', label: 'Ad spend', num: true, fmt: v => v == null ? '–' : randK(v) }, { key: 'cpl', label: 'per enquiry', num: true, fmt: v => v == null ? '–' : rand(v) },
+      { key: 'cpr', label: 'per reg.', num: true, render: (v, r) => v == null ? '–' : el('span', { class: r.perReg && v > r.perReg ? 'bad' : r.perReg && v > 0.5 * r.perReg ? 'warn' : 'good' }, rand(v)) },
+      { key: 'roi', label: 'Value÷spend', num: true, fmt: v => v == null ? '–' : n1(v) + '×' });
+    const adsNote = S.ads && S.ads.accounts ? ' Ad spend: PPC = Google Ads account spend for the month; Facebook = Meta account spend (Skills Academy from the Skills_Academy_Backup account; Matric College Facebook spend not yet readable). Cost per registration is red when it exceeds the 12-month value of a registration on that channel, amber above half of it. Spend from channels with no CRM leads is not shown.' : ' Spend is not in this table yet.';
+    out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Funnel by college and channel'), el('span', { class: 'xs muted' }, monthLabel(fMonth) + (fMonth !== D.month ? ' (last full month; too few registrations yet in ' + monthLabel(D.month) + ')' : '') + (DM ? ' · enquiries incl. repeats; funnel on new leads' : ' · leads created this month'))), el('div', { class: 'table-wrap dense' }, sortableTable(fcols, rows, 'leads')),
+      el('p', { class: 'note' }, (DM ? 'Enquiries = all submissions on the channel this month (repeats carry the channel of their latest enquiry). Allocation and conversion are measured on new leads. ' : '') + adsNote)));
     // landing pages + lead age at sale
     const colConv = {}; for (const [col, chs] of Object.entries(L.monthly[D.month] || {})) { let l = 0, r = 0; for (const v of Object.values(chs)) { l += v.leads; r += v.registered; } colConv[col] = l ? r / l : 0; }
     const prow = L.pages.filter(p => p.leads >= 50).slice(0, 25).map(p => ({ ...p, conv: pctN(p.registered, p.leads), vs: colConv[p.college] ? 100 * p.registered / p.leads / (100 * colConv[p.college]) : null }));
@@ -1235,11 +1256,12 @@
 
   async function load() {
     const bust = `?v=${Math.floor(Date.now() / 60000)}`;
-    const [salesRes, collRes, leadsRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null), fetch('data/leads.json' + bust).catch(() => null)]);
+    const [salesRes, collRes, leadsRes, adsRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null), fetch('data/leads.json' + bust).catch(() => null), fetch('data/ads.json' + bust).catch(() => null)]);
     if (!salesRes.ok) throw new Error('sales.json ' + salesRes.status);
     const sales = await salesRes.json();
     const coll = collRes && collRes.ok ? await collRes.json() : null;
     S.leads = leadsRes && leadsRes.ok ? await leadsRes.json() : null;
+    S.ads = adsRes && adsRes.ok ? await adsRes.json() : null;
     S.sales = buildSales(sales);
     S.coll = buildCollections(coll);
     $('#asof').textContent = `Data to ${dDow(S.sales.latest)} ${dShort(S.sales.latest)} · refreshed ${timeAgo(sales.generated_at)}`;

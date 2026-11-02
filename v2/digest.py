@@ -1,6 +1,6 @@
 """Plain-text highlights for a manager email, built from v2/data/sales.json and collections.json.
 Usage: python v2/digest.py [sales.json] [collections.json]  -> prints subject line then body."""
-import json, sys, datetime, collections, urllib.request
+import json, os, sys, datetime, collections, urllib.request
 
 def load(path_or_url):
     if path_or_url.startswith('http'):
@@ -166,6 +166,18 @@ def main(sales, coll, leads=None):
             ds = (LD['demand'].get('sales') or {})
             L.append(f"- True demand this month: {e:,} enquiries = {n:,} new contacts + {r:,} repeat enquiries ({100*r/max(1,e):.0f}% repeats) · " + ', '.join(f"{c} {ce:,} ({100*cr/max(1,ce):.0f}% repeat)" for c, ce, cr in sorted(per_col, key=lambda x: -x[1])))
             if ds.get('total'): L.append(f"- Sales in the last {LD['window']['days']} days from people who enquired again: {ds['from_repeat_enquirers']:,} of {ds['total']:,} ({ds['pct']}%)")
+        try:
+            AD = load(os.path.join(os.path.dirname(str(leads)), 'ads.json')).get('monthly', {}).get(month, {}) if leads else {}
+        except Exception:  # noqa: BLE001
+            AD = {}
+        if AD:
+            bits = []
+            for col, chs in (LD.get('monthly', {}).get(month) or {}).items():
+                for ch, v in chs.items():
+                    a_ = (AD.get(col) or {}).get(ch)
+                    if a_ and a_.get('cost') and v.get('registered'):
+                        bits.append((col.split()[0] + ' ' + ch, a_['cost'] / v['registered'], a_['cost']))
+            if bits: L.append('- Ad spend per registration this month: ' + ' · '.join(f"{n} R{c:,.0f} (spend R{t/1000:,.0f}k)" for n, c, t in sorted(bits, key=lambda x: -x[1])))
         age = LD.get('lead_age_at_sale', {}).get(month, {}); at = sum(age.values())
         if at: L.append(f"- Sales from leads older than 30 days: {100*(age.get('31–90 days',0)+age.get('over 90 days',0))/at:.0f}% · no CRM enquiry found: {100*age.get('no lead found',0)/at:.0f}%")
         L.append('')
