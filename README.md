@@ -138,3 +138,24 @@ GCLID check (2 Nov 2026): the CRM has no GCLID field. The "Source Page" field ke
 path with its query string, which includes a full `gclid` for roughly one in ten recent values and
 only on the newer landing pages, so an offline-conversion feed to Google Ads is not viable until every
 form stores the gclid (hidden field) on submission.
+
+### v2.7 — what sold actually pays (`v2/data/payments.json`)
+
+`v2/pipeline_payments.py` joins every sale in the registration sheets (since August 2026) to the
+weekly FileMaker report "All registrations 2024 to date" by CRM number, taking the FileMaker row whose
+registration date is nearest the sale day (98–99% of sales are found). It writes only aggregates to
+`v2/data/payments.json`: per sales month, per registrar, per course family, per department and per
+sales week — sold, matched, paid anything, cash received, never paid (status Pending), cancelled,
+fully paid. The FileMaker export itself holds personal data and is never committed. A sale "has paid"
+when FileMaker shows any learner payment for that registration; payments are cumulative to the report
+date, so the newest month is not comparable with older ones. The paid-anything share flattens about six
+weeks after the sale, so the registrar and course tables judge only months whose end is at least five
+weeks before the report date.
+
+Leadership, Sales Manager and Collections Manager show "What sold actually pays" (per month), the
+weekly cohort curve, "Registrars · whose sales pay" (paid share vs the team on the same months, and
+how many sales short of the team rate) and "Courses · which sales pay". "Today's three" raises a
+leadership action when a registrar with 40+ matched sales pays 12 points or more below the team rate.
+
+First reading (report to 31 Oct 2026): of August sales, 44% have paid anything and 1,603 of 3,165
+never paid; registrars range from 24% to 80% on the same month's sales.

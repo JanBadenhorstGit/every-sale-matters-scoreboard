@@ -178,6 +178,19 @@ def main(sales, coll, leads=None):
                     if a_ and a_.get('cost') and v.get('registered'):
                         bits.append((col.split()[0] + ' ' + ch, a_['cost'] / v['registered'], a_['cost']))
             if bits: L.append('- Ad spend per registration this month: ' + ' · '.join(f"{n} R{c:,.0f} (spend R{t/1000:,.0f}k)" for n, c, t in sorted(bits, key=lambda x: -x[1])))
+        try:
+            PAY = load(os.path.join(os.path.dirname(str(leads)), 'payments.json')) if leads else {}
+        except Exception:  # noqa: BLE001
+            PAY = {}
+        if PAY.get('months'):
+            to = PAY.get('report_registered_to', '')
+            import datetime as _dt
+            try: cutoff = (_dt.date.fromisoformat(to) - _dt.timedelta(days=66)).strftime('%Y-%m')
+            except Exception: cutoff = to[:7]  # noqa: BLE001
+            closed = [m for m in sorted(PAY['months']) if (PAY['months'][m].get('_all') or {}).get('sold', 0) >= 50 and m <= cutoff]
+            if closed:
+                m0 = closed[-1]; a0 = PAY['months'][m0]['_all']
+                L.append(f"- What sold actually pays (FileMaker to {to}): {m0} sales {a0['sold']:,}, paid anything {a0['paid_pct']:.0f}%, never paid {a0['pending']:,}, cash R{a0['paid_amt']/1000:,.0f}k")
         age = LD.get('lead_age_at_sale', {}).get(month, {}); at = sum(age.values())
         if at: L.append(f"- Sales from leads older than 30 days: {100*(age.get('31–90 days',0)+age.get('over 90 days',0))/at:.0f}% · no CRM enquiry found: {100*age.get('no lead found',0)/at:.0f}%")
         L.append('')

@@ -586,6 +586,14 @@
     for (const p of D.people) if (p.active && p.today === 0 && p.perDay >= 2 && p.m.reg > 0) add('sales', p.perDay * (p.avgInst || avg) * HORIZON, `Call ${p.name}: no sale ${dShort(D.latest)}, usually ${n1(p.perDay)}/day`, 'a lost day at their rate');
     // Sales: D/O gap vs team
     for (const p of D.people) if (p.m.reg >= 15 && p.doRate != null && t.doRate != null && p.doRate < t.doRate - 15) { const gap = Math.round((t.doRate - p.doRate) / 100 * p.m.reg); add('sales', gap * (p.avgInst || avg) * HORIZON * 0.5, `Coach ${p.name} on debit orders: ${Math.round(p.doRate)}% vs team ${Math.round(t.doRate)}% (${gap} sales without a mandate)`, 'half the value of the missing mandates'); }
+    // Leadership: registrars whose closed-month sales pay far below the team rate
+    if (S.pay && S.pay.months) {
+      const judge = payJudgeMonths(S.pay);
+      for (const r of payRegistrarRows(S.pay, judge)) if (r.matched >= 40 && r.gap != null && r.gap < -12) {
+        const p = D.people.find(x => x.key === r.key); const nm = p ? p.name : r.key;
+        add('leadership', r.missing * (p && p.avgInst ? p.avgInst : avg) * HORIZON * 0.5, `${nm}: only ${Math.round(r.paidPct)}% of ${judge.map(monthLabel).join(' and ')} sales have paid anything vs ${Math.round(r.teamPct)}% team (${n0(r.missing)} sales short); review how the sale is closed`, 'half the value of the sales that never paid');
+      }
+    }
     // Sales: course families with low D/O
     const cm = (D.raw.course_months || {})[D.month] || {};
     for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7 && (v.inst_n ? v.inst_sum / v.inst_n : 0) < 20000) add('sales', (v.n - v.do) * (v.inst_n ? v.inst_sum / v.inst_n : avg) * HORIZON * 0.5, `${fam}: ${v.n - v.do} of ${v.n} sales have no debit order`, 'half the value of the missing mandates');
@@ -692,6 +700,66 @@
     if (goalMonth < D.month) parts.push(`no ${monthLabel(D.month)} tab yet`);
     return parts.join(' · ');
   }
+  // ---------- v2.7: what sold actually pays (FileMaker payment totals joined to each sale) ----------
+  // Months old enough to judge: the paid-anything curve flattens about 6 weeks after the sale.
+  // Closed months whose end is at least 5 weeks before the FileMaker report date (the curve has flattened by then).
+  function payJudgeMonths(P) {
+    const to = P.report_registered_to ? new Date(P.report_registered_to) : new Date();
+    return Object.keys(P.months || {}).sort().filter(m => (P.months[m]._all || {}).sold >= 50 && (to - new Date(m + '-01T00:00:00')) / 864e5 >= 31 + 35).slice(-2);
+  }
+  function payRegistrarRows(P, months) {
+    // Per registrar: sold and paid across the chosen months, compared with the team rate of the same months (same age).
+    const acc = {};
+    for (const m of months) {
+      const team = (P.months[m] || {})._all; if (!team || !team.matched) continue;
+      for (const [k, v] of Object.entries(P.registrars[m] || {})) {
+        const a = acc[k] ||= { key: k, sold: 0, matched: 0, paid: 0, cash: 0, pending: 0, cancelled: 0, expected: 0 };
+        a.sold += v.sold; a.matched += v.matched; a.paid += v.paid_any; a.cash += v.paid_amt; a.pending += v.pending; a.cancelled += v.cancelled;
+        a.expected += v.matched * team.paid_any / team.matched;
+      }
+    }
+    return Object.values(acc).map(a => ({ ...a, paidPct: pctN(a.paid, a.matched), teamPct: pctN(a.expected, a.matched), gap: a.matched ? 100 * (a.paid - a.expected) / a.matched : null, missing: Math.round(a.expected - a.paid) }));
+  }
+  function paymentsCard(D, scope) {
+    const P = S.pay; if (!P || !P.months) return null;
+    const months = Object.keys(P.months).sort().filter(m => (P.months[m]._all || {}).sold >= 50);
+    const judge = payJudgeMonths(P);
+    const nameOf = k => (D.people.find(p => p.key === k) || {}).name || k.replace(/\b\w/g, c => c.toUpperCase());
+    const collegeOf = k => (D.people.find(p => p.key === k) || {}).college || '';
+    const monthRows = months.map(m => { const a = P.months[m]._all; return { m, label: monthLabel(m), sold: a.sold, matched: a.match_pct, paid: a.paid_pct, pending: a.pending, cancelled: a.cancelled, cash: a.paid_amt, perSale: a.sold ? a.paid_amt / a.sold : null }; });
+    const mcols = [{ key: 'label', label: 'Sales month' }, { key: 'sold', label: 'Sold', num: true }, { key: 'paid', label: 'Paid any', num: true, render: v => v == null ? '–' : el('span', { class: v < 35 ? 'bad' : v < 45 ? 'warn' : 'good' }, Math.round(v) + '%') },
+      { key: 'pending', label: 'Never paid', num: true }, { key: 'cancelled', label: 'Cancelled', num: true }, { key: 'cash', label: 'Cash', num: true, fmt: randK }];
+    const wk = Object.entries(P.weeks || {}).filter(([k, v]) => v.sold >= 100).sort();
+    const { card: wcard, canvas: wcv } = chartCard('Share of each week’s sales that has paid anything', `cumulative to ${P.report_registered_to ? dShort(P.report_registered_to) : 'report date'} · flattens about 6 weeks after the sale`);
+    queueMicrotask(() => chart(wcv, { type: 'bar', data: { labels: wk.map(([k]) => dShort(k)), datasets: [{ label: 'Paid any', data: wk.map(([, v]) => v.paid_pct), backgroundColor: wk.map(([k]) => k >= (judge[judge.length - 1] || '') + '-99' ? 'rgba(99,142,255,.45)' : 'rgba(79,201,138,.8)') }] }, options: { maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, max: 60, ticks: { callback: v => v + '%' } } }, plugins: { legend: { display: false } } } }));
+    const parts = [el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'What sold actually pays'), el('span', { class: 'xs muted' }, `FileMaker payment totals to ${P.report_registered_to ? dShort(P.report_registered_to) : '–'} joined to each sale by CRM number`)),
+      el('div', { class: 'table-wrap dense' }, sortableTable(mcols, monthRows, 'm')),
+      el('p', { class: 'note' }, 'A sale counts as paid when FileMaker shows any learner payment for that registration. Pending = no payment has ever been received. 98–99% of sales are found in FileMaker. Payments are cumulative to the report date, so the newest month is not yet comparable; judge registrars and courses on the closed months. The weekly FileMaker report arrives on Mondays; this card refreshes then.'))];
+    if (scope !== 'collections') parts.push(wcard);
+    if (judge.length && (scope === 'sales' || scope === 'leadership')) {
+      const rows = payRegistrarRows(P, judge).filter(r => r.matched >= 30).map(r => ({ ...r, name: nameOf(r.key), college: collegeOf(r.key) }));
+      const rcols = [{ key: 'name', label: 'Registrar', render: (v, r) => el('span', {}, el('span', { class: 'dot ' + collegeClass(r.college) }), ' ', v) }, { key: 'sold', label: 'Sold', num: true },
+        { key: 'paidPct', label: 'Paid any', num: true, render: (v, r) => v == null ? '–' : el('span', { class: r.gap != null && r.gap < -12 ? 'bad' : r.gap < -5 ? 'warn' : r.gap > 10 ? 'good' : '' }, Math.round(v) + '%') },
+        { key: 'teamPct', label: 'Team', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' },
+        { key: 'missing', label: 'Short', num: true, render: v => v == null ? '–' : el('span', { class: v > 15 ? 'bad' : '' }, v > 0 ? n0(v) : '–') },
+        { key: 'cash', label: 'Cash', num: true, fmt: randK }];
+      parts.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Registrars · whose sales pay'), el('span', { class: 'xs muted' }, judge.map(monthLabel).join(' + ') + ' sales · registrars with 30+ matched sales')),
+        el('div', { class: 'table-wrap dense' }, sortableTable(rcols, rows, 'missing')),
+        el('p', { class: 'note' }, 'Team rate is computed on the same months, so age does not favour anyone. "Sales short of team rate" = how many more of this registrar’s sales would have paid at the team rate; a high number with a low paid share points to how the sale is closed (deposit promised, debit-order date, course fit), not to collections.')));
+    }
+    if (judge.length && (scope === 'collections' || scope === 'leadership')) {
+      const fam = {};
+      for (const m of judge) for (const [f, v] of Object.entries(P.families[m] || {})) { const a = fam[f] ||= { fam: f, dept: v.dept, sold: 0, matched: 0, paid: 0, cash: 0, pending: 0 }; a.sold += v.sold; a.matched += v.matched; a.paid += v.paid_any; a.cash += v.paid_amt; a.pending += v.pending; }
+      const frows = Object.values(fam).filter(a => a.matched >= 20).map(a => ({ ...a, paidPct: pctN(a.paid, a.matched), perSale: a.sold ? a.cash / a.sold : null }));
+      const fcols = [{ key: 'fam', label: 'Course family' }, { key: 'dept', label: 'Dept' }, { key: 'sold', label: 'Sold', num: true }, { key: 'paidPct', label: 'Paid any', num: true, render: v => v == null ? '–' : el('span', { class: v < 30 ? 'bad' : v < 40 ? 'warn' : 'good' }, Math.round(v) + '%') }, { key: 'pending', label: 'Never paid', num: true }, { key: 'cash', label: 'Cash', num: true, fmt: randK }];
+      parts.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Courses · which sales pay'), el('span', { class: 'xs muted' }, judge.map(monthLabel).join(' + ') + ' sales · families with 20+ matched sales')), el('div', { class: 'table-wrap dense' }, sortableTable(fcols, frows, 'sold'))));
+    }
+    const frag = document.createDocumentFragment();
+    frag.appendChild(el('section', { class: 'grid two' }, parts[0], parts[1] || null));
+    if (parts.length > 2) frag.appendChild(el('section', { class: 'grid two' }, parts[2], parts[3] || null));
+    return frag;
+  }
+
   function viewLeadership(D, C) {
     const t = D.team; const out = [];
     const cur = C && C.cur ? C.perCycle[C.cur] : null;
@@ -722,6 +790,7 @@
     ));
 
     if (S.leads) out.push(funnelStripCard(D, S.leads));
+    const payL = paymentsCard(D, 'leadership'); if (payL) out.push(payL);
     // Charts: daily registrations stacked by college + August pace
     const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = August pace');
     const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
@@ -820,6 +889,7 @@
     out.push(el('section', { class: 'grid two' }, paretoCard(D, C), mixCard));
     out.push(testsCard(C, /mailer|sms|call|script|offer|price|deposit|landing|other|^$/i));
     out.push(el('section', { class: 'grid three' }, trendCard, incentiveExportCard(D), teamLinksCard(D)));
+    const payS = paymentsCard(D, 'sales'); if (payS) out.push(payS);
 
     // League table
     const cols = [
@@ -1031,6 +1101,7 @@
       const dayKeys = Object.keys(a.byDay).filter(d => d >= cur.start && d <= cur.end).sort();
       chart(cv3, { type: 'bar', data: { labels: dayKeys.map(dShort), datasets: [{ label: 'Requests', data: dayKeys.map(d => a.byDay[d]), backgroundColor: '#f06a6a', borderRadius: 3 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
     });
+    const payC = paymentsCard(D, 'collections'); if (payC) out.push(payC);
     return out;
   }
 
@@ -1256,12 +1327,13 @@
 
   async function load() {
     const bust = `?v=${Math.floor(Date.now() / 60000)}`;
-    const [salesRes, collRes, leadsRes, adsRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null), fetch('data/leads.json' + bust).catch(() => null), fetch('data/ads.json' + bust).catch(() => null)]);
+    const [salesRes, collRes, leadsRes, adsRes, payRes] = await Promise.all([fetch('data/sales.json' + bust), fetch('data/collections.json' + bust).catch(() => null), fetch('data/leads.json' + bust).catch(() => null), fetch('data/ads.json' + bust).catch(() => null), fetch('data/payments.json' + bust).catch(() => null)]);
     if (!salesRes.ok) throw new Error('sales.json ' + salesRes.status);
     const sales = await salesRes.json();
     const coll = collRes && collRes.ok ? await collRes.json() : null;
     S.leads = leadsRes && leadsRes.ok ? await leadsRes.json() : null;
     S.ads = adsRes && adsRes.ok ? await adsRes.json() : null;
+    S.pay = payRes && payRes.ok ? await payRes.json() : null;
     S.sales = buildSales(sales);
     S.coll = buildCollections(coll);
     $('#asof').textContent = `Data to ${dDow(S.sales.latest)} ${dShort(S.sales.latest)} · refreshed ${timeAgo(sales.generated_at)}`;
