@@ -74,13 +74,15 @@ def parse_bank(wb):
     """{'2026-09': {'Skills Academy': [{dom, label, sales, collections, unclaimed}, ...]}}"""
     bank = {}
     for title in wb.sheetnames:
-        m = re.match(r"^\s*(Skills Academy|Bellview|Matric)\s+Bank\s+([A-Za-z]+)\s*$", title)
+        # Tab names vary: "Matric Bank October", "Skills Academy October Bank", "Bellivew November Bank" (typo).
+        m = re.match(r"^\s*(Skills Academy|Bell?i?v[ie]{1,2}w|Matric)\s+(?:Bank\s+([A-Za-z]+)|([A-Za-z]+)\s+Bank)\s*$", title, re.I)
         if not m:
             continue
-        mk = month_key(m.group(2))
+        mk = month_key(m.group(2) or m.group(3))
         if not mk:
             continue
-        college = COLLEGE_ALIASES[m.group(1).lower()]
+        cname = m.group(1).lower()
+        college = COLLEGE_ALIASES.get(cname) or COLLEGE_ALIASES["bellview"]
         rows = []
         for r in wb[title].iter_rows(values_only=True):
             label = str(r[0] or "").strip()
@@ -314,7 +316,19 @@ def main():
         payload["bank"] = parse_bank(wb)
         payload["goals"] = parse_goals(wb)
         wb.close()
-        payload["sources"]["bank"] = {"sheet": SHEETS["collections_goal"],
+        # A bank tab whose figures equal the previous month's is a copied template, not data: drop it and say so.
+        copied = []
+        months = sorted(payload["bank"])
+        for pm, lm in zip(months, months[1:]):
+            for college, rows in list(payload["bank"][lm].items()):
+                prev = payload["bank"][pm].get(college)
+                key = lambda rr: [(x["dom"], x.get("collections"), x.get("sales")) for x in rr]
+                if prev and any(x.get("collections") for x in rows) and key(rows) == key(prev):
+                    copied.append({"college": college, "month": lm, "same_as": pm})
+                    del payload["bank"][lm][college]
+            if not payload["bank"][lm]:
+                del payload["bank"][lm]
+        payload["sources"]["bank"] = {"sheet": SHEETS["collections_goal"], "copied_tabs": copied,
                                       "latest_month": max(payload["bank"]) if payload["bank"] else None,
                                       "latest_goal_month": max(payload["goals"]) if payload["goals"] else None}
     if "cancellations" in files:

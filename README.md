@@ -169,3 +169,15 @@ college median, "none" when no registration), share of enquirers answering "I ha
 answering "Still at High School", and the conversion of enquirers who do have funds. Shown on the
 Marketing view. Snapshot; refreshed together with ads.json. Bellview's course pages (OHS, Business)
 cannot be judged yet: most Bellview PPC enquiries carry no Source Page.
+
+### v2.9 — collections run on a cycle, and a day is complete only the next day
+
+- Collections are judged on the cycle **8th to 7th** (named after the month it starts in), never on the calendar
+  month: cycle totals, "no tab yet" flags, chart titles and the digest all use the cycle. There is no "November
+  collections goal" while the 8 Oct – 7 Nov cycle is running.
+- A day's bank receipts are only complete the next day. Today's figures are shown as partial and excluded from
+  cumulative actuals, forecasts and day comparisons. The Collections Manager view opens with **latest complete
+  banking day vs its day goal** (weekends skipped) and **today's day goal** from the goal tab.
+- `pipeline_collections.py` accepts both tab-name orders ("Matric Bank October", "Skills Academy October Bank",
+  including the "Bellivew" spelling). A bank tab whose figures equal the previous month's is a copied template:
+  it is dropped and flagged in Attention and the digest (`sources.bank.copied_tabs`).

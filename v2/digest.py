@@ -48,15 +48,39 @@ def main(sales, coll, leads=None):
     unproc = sum(1 for r in rows if not r.get('status')); logged_today = sum(1 for r in rows if r.get('logged') == latest)
     cat = collections.Counter(r.get('category') or 'not captured' for r in rows).most_common(3)
     gm = sorted(C['goals'])[-1]; g = C['goals'][gm]
-    # goal tab 'actual' = bank collections since the 8th; extend from the bank tabs where the tab stops
-    bank = C['bank'].get(gm, {}); cum = 0.0; last = None; note = ''
-    import calendar; dim = calendar.monthrange(int(gm[:4]), int(gm[5:]))[1]
+    # Collections run on a cycle from the 8th to the 7th; a day's receipts are complete only the next day.
+    sast_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)).date()
+    cycle = sast_today.replace(day=1) if sast_today.day >= 8 else (sast_today.replace(day=1) - datetime.timedelta(days=1)).replace(day=1)
+    cycle_key = cycle.strftime('%Y-%m'); nxt = (cycle.replace(day=28) + datetime.timedelta(days=5)).replace(day=1)
+    cycle_label = f"8 {cycle.strftime('%b')} - 7 {nxt.strftime('%b')}"
+    def day_date(mk, dom):
+        y, m = int(mk[:4]), int(mk[5:]); d0 = datetime.date(y, m, 1)
+        if dom < 8: d0 = (d0.replace(day=28) + datetime.timedelta(days=5)).replace(day=1)
+        try: return d0.replace(day=dom)
+        except ValueError: return None
+    # goal tab 'actual' = bank collections since the 8th; extend from the bank tabs where the tab stops; never count today
+    gm_next = (datetime.date(int(gm[:4]), int(gm[5:]), 28) + datetime.timedelta(days=5)).strftime('%Y-%m')
+    cum = 0.0; last = None; note = ''
     for r in g:
+        dd = day_date(gm, r['dom'])
+        if dd is None or dd >= sast_today: 
+            if dd is not None and dd >= sast_today: break
+            continue
         if r.get('actual_cum') is not None: cum = r['actual_cum']; last = (r['dom'], cum, r['goal_cum'], False); continue
-        if r['dom'] < 8 or r['dom'] > dim: continue
+        bank = C['bank'].get(gm if r['dom'] >= 8 else gm_next, {})
         day = [x for rows in bank.values() for x in rows if x['dom'] == r['dom']]
         if not day: break
         cum += sum(x.get('collections') or 0 for x in day); last = (r['dom'], cum, r['goal_cum'], True)
+    # latest complete day (yesterday or earlier) vs its day goal, and today's goal
+    bank_days = sorted({(mk, x['dom']) for mk, b in C['bank'].items() for rows in b.values() for x in rows if datetime.date(int(mk[:4]), int(mk[5:]), min(x['dom'], 28)) is not None})
+    def bd_date(mk, dom):
+        try: return datetime.date(int(mk[:4]), int(mk[5:]), dom)
+        except ValueError: return None
+    complete = sorted(d for d in (bd_date(mk, dom) for mk, dom in bank_days) if d and d < sast_today and d.weekday() < 5)
+    last_day = complete[-1] if complete else None
+    def coll_on(d): return sum((x.get('collections') or 0) for rows in C['bank'].get(d.strftime('%Y-%m'), {}).values() for x in rows if x['dom'] == d.day)
+    goal_row = lambda d: next((r for r in g if r['dom'] == d.day and day_date(gm, r['dom']) == d), None)
+    last_day_goal = goal_row(last_day) if last_day else None; today_goal = goal_row(sast_today)
     gl = datetime.date(int(gm[:4]), int(gm[5:]), 1).strftime('%b')
     name = lambda k: people.get(k, {}).get('name', k)
     dl = datetime.date.fromisoformat(latest).strftime('%a %-d %b')
@@ -68,7 +92,7 @@ def main(sales, coll, leads=None):
     if unproc > 20: alerts.append(f"RED  {unproc} cancellation requests logged but not yet worked")
     ref = datetime.date.fromisoformat(latest)
     open_rows = [r for r in rows if (r.get('status') or '').lower() not in ('saved', 'cancel')]
-    old_open = sum(1 for r in open_rows if (ref - datetime.date.fromisoformat(r['logged'])).days > 14)
+    old_open = sum(1 for r in open_rows if r.get('logged') and (ref - datetime.date.fromisoformat(r['logged'])).days > 14)
     if old_open: alerts.append(f"AMBER {old_open} open cancellation requests older than 14 days")
     prev_key = sorted(cyc)[-2] if len(cyc) > 1 else None
     if prev_key:
@@ -79,7 +103,10 @@ def main(sales, coll, leads=None):
     for f in ((LD or {}).get('sources', {}).get('flags', [])):
         alerts.append(f"AMBER Placement leak: {f['college'].split()[0]} {f['path'].split('/')[-1]} · {f['third_party_leads']:,} third-party leads, {f['third_party_registered']} registered")
     bank_latest = sorted(C['bank'])[-1]
-    if bank_latest < month: alerts.append(f"AMBER Collections Daily Goal sheet has no tabs for {datetime.date(int(month[:4]), int(month[5:]), 1).strftime('%B')} yet")
+    if bank_latest < cycle_key: alerts.append(f"AMBER Collections Daily Goal sheet has no bank tabs for the cycle {cycle_label} yet")
+    if gm < cycle_key: alerts.append(f"AMBER No goal tab yet for the cycle {cycle_label}")
+    for t in (C.get('sources', {}).get('bank', {}).get('copied_tabs') or []):
+        alerts.append(f"RED  {t['college']} bank tab for {datetime.date(int(t['month'][:4]), int(t['month'][5:]), 1).strftime('%B')} repeats the {datetime.date(int(t['same_as'][:4]), int(t['same_as'][5:]), 1).strftime('%B')} figures (copied template?); ignored")
     unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
     if unrostered: alerts.append(f"AMBER {len(unrostered)} registrars selling but not on the comparison-sheet roster: {', '.join(sorted(unrostered))}")
     # ---- today's three: actions ranked by estimated cash impact (students × avg instalment × 12 months) ----
@@ -101,7 +128,7 @@ def main(sales, coll, leads=None):
             acts.append((gap * avg_p(k) * H * 0.5, f"Coach {name(k)} on debit orders: {do_rate:.0f}% vs team {team_do:.0f}% ({gap} sales without a mandate)"))
     save_rate = (saved / (saved + canc)) if (saved + canc) else 0.15
     if unproc:
-        oldest = max((ref - datetime.date.fromisoformat(r['logged'])).days for r in rows if not r.get('status'))
+        oldest = max([(ref - datetime.date.fromisoformat(r['logged'])).days for r in rows if not r.get('status') and r.get('logged')] or [0])
         acts.append((unproc * team_avg * H * save_rate, f"Assign the {unproc} unworked cancellation requests (oldest {oldest} days)"))
     if old_open: acts.append((old_open * team_avg * H * save_rate, f"Close the {old_open} open cancellation request{'s' if old_open != 1 else ''} older than 14 days"))
     by_agent = collections.defaultdict(lambda: [0, 0, 0])
@@ -138,7 +165,9 @@ def main(sales, coll, leads=None):
         L.append('- By course type: ' + ', '.join(f"{d} {n:,} (R{val[d]/1e6:.2f}m/month signed)" for d, n in dep.most_common()))
     L.append('')
     L.append('COLLECTIONS')
-    if last: L.append(f"- Cash vs goal (cycle from 8 {gl}): R{last[1]/1e6:.2f}m banked by {last[0]} {gl} vs R{last[2]/1e6:.2f}m planned" + (" (goal tab not filled past " + str([r['dom'] for r in g if r.get('actual_cum') is not None and not r.get('derived')][-1]) + f" {gl}; rest from bank tabs)" if last[3] else ''))
+    if last_day: L.append(f"- {last_day.strftime('%a %-d %b')} (latest complete day): R{coll_on(last_day)/1e3:,.0f}k banked" + (f" vs R{last_day_goal['goal_day']/1e3:,.0f}k day goal" if last_day_goal and last_day_goal.get('goal_day') else " · no day goal"))
+    if today_goal and today_goal.get('goal_day') is not None: L.append(f"- Today's goal ({sast_today.strftime('%a %-d %b')}): R{today_goal['goal_day']/1e3:,.0f}k · R{today_goal['goal_cum']/1e6:.2f}m planned by tonight")
+    if last: L.append(f"- Cycle cash vs goal ({cycle_label}): R{last[1]/1e6:.2f}m banked to {last[0]} {gl if last[0] >= 8 else nxt.strftime('%b')} vs R{last[2]/1e6:.2f}m planned" + (" (goal tab not filled past " + str([r['dom'] for r in g if r.get('actual_cum') is not None and not r.get('derived')][-1]) + f" {gl}; rest from bank tabs)" if last[3] else ''))
     if cur: L.append(f"- Cancellation requests this cycle: {len(rows)} · {saved} saved, {canc} cancelled · save rate {100*saved/max(1,saved+canc):.0f}% · {unproc} logged but not yet worked · {logged_today} logged {dl}")
     if cat: L.append('- Main reasons: ' + ', '.join(f"{c} {n}" for c, n in cat))
     L.append('')

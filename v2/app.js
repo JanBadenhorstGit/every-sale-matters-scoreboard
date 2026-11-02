@@ -28,6 +28,16 @@
   const pctN = (a, b) => b ? 100 * a / b : null;
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  // Collections run on a cycle from the 8th to the 7th, named after the month it starts in. A day's bank
+  // receipts are only complete the next day, so "latest complete day" is the last banked day before today.
+  const sastToday = () => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' })); d.setHours(0, 0, 0, 0); return d; };
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const cycleMonthOf = d => { const s = d.getDate() >= 8 ? new Date(d.getFullYear(), d.getMonth(), 1) : new Date(d.getFullYear(), d.getMonth() - 1, 1); return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}`; };
+  const nextMonthKey = m => { const y = +m.slice(0, 4), mo = +m.slice(5, 7); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; };
+  const cycleLabel = m => `8 ${MONTHS[+m.slice(5, 7) - 1]} – 7 ${MONTHS[+nextMonthKey(m).slice(5, 7) - 1]}`;
+  const cycleDayDate = (m, dom) => { const mm = dom >= 8 ? m : nextMonthKey(m); return `${mm}-${String(dom).padStart(2, '0')}`; };
+  const CYCLE = cycleMonthOf(sastToday());
+  const TODAY = ymd(sastToday());
   const dShort = iso => { const d = new Date(iso + 'T00:00:00'); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
   const dDow = iso => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(iso + 'T00:00:00').getDay()];
   const monthLabel = ym => `${MONTHS_LONG[+ym.slice(5, 7) - 1]} ${ym.slice(0, 4)}`;
@@ -217,14 +227,18 @@
       let cum = 0; let filled = 0; g.sheetTo = null;
       for (const r of g) {
         const inThisMonth = r.dom >= 8; const bank = inThisMonth ? bankM : bankNext;
+        r.date = cycleDayDate(m, r.dom); r.partial = r.date >= TODAY; // today's receipts are incomplete until tomorrow
         if (r.actual_cum != null) { cum = r.actual_cum; g.sheetTo = r.dom; continue; }
+        if (r.partial) break;
         if (inThisMonth && r.dom > new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate()) continue; // e.g. 31 Sep
         if (!hasBankDay(bank, r.dom)) break;
         cum += dayColl(bank, r.dom); r.actual_cum = Math.round(cum * 100) / 100; r.derived = true; filled++;
       }
       g.derivedDays = filled;
     }
-    return { raw, cycles, cur, prev, perCycle, bankMonths, goalMonths, agg };
+    // Cycle totals from the bank tabs: 8th of the cycle month to the 7th of the next, per college.
+    const cycleBank = m => { const out = {}; for (const [mm, lo, hi] of [[m, 8, 31], [nextMonthKey(m), 1, 7]]) for (const [c, rows] of Object.entries(raw.bank[mm] || {})) { const o = out[c] ||= { sales: 0, collections: 0, unclaimed: 0, days: [] }; for (const r of rows) if (r.dom >= lo && r.dom <= hi) { o.sales += r.sales || 0; o.collections += r.collections || 0; o.unclaimed += r.unclaimed || 0; o.days.push({ ...r, date: `${mm}-${String(r.dom).padStart(2, '0')}` }); } } return out; };
+    return { raw, cycles, cur, prev, perCycle, bankMonths, goalMonths, agg, cycleBank };
   }
 
   // ---------- charts ----------
@@ -307,8 +321,8 @@
     rows.push(['Incentive sheet', sales.incentive_week_days.length ? `week of ${dShort(sales.incentive_week_days[0])}` : '–', 'good', 'live']);
     if (C) {
       const b = C.raw.sources.bank; const cz = C.raw.sources.cancellations;
-      const bankStale = b && b.latest_month < D.month;
-      rows.push(['Banked cash', b && b.latest_month ? monthLabel(b.latest_month) : '–', bankStale ? 'bad' : 'good', bankStale ? 'no tabs for ' + monthLabel(D.month) : 'live']);
+      const bankStale = b && b.latest_month < CYCLE;
+      rows.push(['Banked cash', b && b.latest_month ? monthLabel(b.latest_month) : '–', bankStale ? 'bad' : 'good', bankStale ? `no tabs for the cycle ${cycleLabel(CYCLE)}` : 'live · a day is complete the next day']);
       rows.push(['Cancellations', cz && cz.latest_logged ? 'logged to ' + dShort(cz.latest_logged > D.latest ? D.latest : cz.latest_logged) : '–', 'good', 'refreshed ' + timeAgo(C.raw.generated_at)]);
     } else rows.push(['Collections data', 'not available', 'bad', 'collections.json missing']);
     return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Data freshness'), el('span', { class: 'xs muted' }, 'sales updated ' + timeAgo(sales.generated_at))),
@@ -337,7 +351,7 @@
   function cashForecast(C) {
     if (!C || !C.goalMonths.length) return null;
     const gm = C.goalMonths[C.goalMonths.length - 1]; const g = C.raw.goals[gm];
-    const withActual = g.filter(r => r.actual_cum != null); const last = withActual[withActual.length - 1];
+    const withActual = g.filter(r => r.actual_cum != null && !r.partial); const last = withActual[withActual.length - 1];
     if (!last) return null;
     const nextOf = m => { const y = +m.slice(0, 4), mo = +m.slice(5, 7); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; };
     const dayColl = (bank, dom) => Object.values(bank).reduce((t, rows) => t + rows.filter(r => r.dom === dom).reduce((u, r) => u + (r.collections || 0), 0), 0);
@@ -377,9 +391,12 @@
       const genAge = Math.round((Date.now() - new Date(C.raw.generated_at)) / 86400000);
       if (genAge > 3) add('Data', 'warn', `Collections data last refreshed ${genAge} days ago`, 'leadership');
       const bankLatest = C.bankMonths[C.bankMonths.length - 1];
-      if (bankLatest && bankLatest < D.month) add('Data', 'bad', `Collections Daily Goal sheet has no tabs for ${monthLabel(D.month)} (latest ${monthLabel(bankLatest)})`, 'collections');
+      if (bankLatest && bankLatest < CYCLE) add('Data', 'bad', `Collections Daily Goal sheet has no bank tabs for the cycle ${cycleLabel(CYCLE)} (latest ${monthLabel(bankLatest)})`, 'collections');
+      // A bank tab whose figures equal the previous month's is a copied template, not data.
+      for (const t of ((C.raw.sources.bank || {}).copied_tabs || [])) add('Data', 'bad', `${t.college} bank tab for ${monthLabel(t.month)} repeats the ${monthLabel(t.same_as)} figures (copied template?); ignored`, 'collections');
       const gm = C.goalMonths[C.goalMonths.length - 1];
-      if (gm) { const g = C.raw.goals[gm]; if (g.derivedDays > 1) add('Data', 'warn', `${monthLabel(gm)} goal tab not filled past day ${g.sheetTo}; actuals derived from bank tabs`, 'collections'); }
+      if (gm && gm < CYCLE) add('Data', 'bad', `No goal tab yet for the cycle ${cycleLabel(CYCLE)} (latest ${cycleLabel(gm)})`, 'collections');
+      if (gm) { const g = C.raw.goals[gm]; if (g.derivedDays > 1) add('Data', 'warn', `Goal tab for ${cycleLabel(gm)} not filled past day ${g.sheetTo}; actuals derived from bank tabs`, 'collections'); }
     } else add('Data', 'bad', 'Collections data not available', 'leadership');
     // Sales
     if (t.pct != null && t.pct < 80) add('Sales', t.pct < 70 ? 'bad' : 'warn', `Team at ${Math.round(t.pct)}% of August pace (${n0(t.m.reg)} vs ${n0(Math.round(t.expected))} expected)`, 'sales');
@@ -697,7 +714,8 @@
     const parts = ['collections banked since the 8th'];
     if (g.sheetTo != null && g.derivedDays) parts.push(`goal tab filled to ${g.sheetTo} ${mo}, rest from bank tabs`);
     else if (g.sheetTo != null) parts.push(`goal tab filled to ${g.sheetTo} ${mo}`);
-    if (goalMonth < D.month) parts.push(`no ${monthLabel(D.month)} tab yet`);
+    if (goalMonth < CYCLE) parts.push(`no tab yet for the cycle ${cycleLabel(CYCLE)}`);
+    parts.push('today excluded: a day is complete the next day');
     return parts.join(' · ');
   }
   // ---------- v2.7: what sold actually pays (FileMaker payment totals joined to each sale) ----------
@@ -764,13 +782,14 @@
     const t = D.team; const out = [];
     const cur = C && C.cur ? C.perCycle[C.cur] : null;
     const bankMonth = C && C.bankMonths.length ? C.bankMonths[C.bankMonths.length - 1] : null;
+    const cycBank = C && bankMonth ? C.cycleBank(CYCLE) : null;
     let bankColl = null, bankSales = null;
-    if (bankMonth) { bankColl = 0; bankSales = 0; for (const rows of Object.values(C.raw.bank[bankMonth])) for (const r of rows) { bankColl += r.collections || 0; bankSales += r.sales || 0; } }
+    if (cycBank) { bankColl = 0; bankSales = 0; for (const o of Object.values(cycBank)) { bankColl += o.collections; bankSales += o.sales; } }
     const goalMonth = C && C.goalMonths.length ? C.goalMonths[C.goalMonths.length - 1] : null;
     let goalPct = null, goalActual = null, goalTarget = null;
     if (goalMonth) {
       const g = C.raw.goals[goalMonth];
-      const withActual = g.filter(r => r.actual_cum != null);
+      const withActual = g.filter(r => r.actual_cum != null && !r.partial);
       const last = withActual[withActual.length - 1];
       goalActual = last ? last.actual_cum : null;
       goalTarget = g[g.length - 1].goal_cum;
@@ -785,7 +804,7 @@
       kpi('Projected month end', n0(Math.round(t.projection)), `${n1(t.perDay)}/day · August pace ${n0(Math.round(t.augPerDay * D.workDays))}`, t.projection >= t.augPerDay * D.workDays ? 'good' : 'bad'),
       kpi('Debit orders on new sales', pct(t.m.do, t.m.reg), `${n0(t.m.do)} of ${n0(t.m.reg)} this month`),
       kpi('Upfront cash on new sales', randK(t.m.paid_amt), `${rand(t.m.paid_amt)} · ${n0(t.m.paid_n)} sales paid something upfront (${pct(t.m.paid_n, t.m.reg)})`),
-      kpi(bankMonth ? `Banked · ${MONTHS[+bankMonth.slice(5, 7) - 1]}` : 'Banked cash', bankColl != null ? randK(bankColl + bankSales) : '–', bankColl != null ? `${randK(bankColl)} collections + ${randK(bankSales)} sales` : 'no bank data', bankMonth && bankMonth < D.month ? 'bad' : ''),
+      kpi(`Banked · cycle ${cycleLabel(CYCLE)}`, bankColl != null ? randK(bankColl + bankSales) : '–', bankColl != null ? `${randK(bankColl)} collections + ${randK(bankSales)} sales · to yesterday` : 'no bank data', bankMonth && bankMonth < CYCLE ? 'bad' : ''),
       kpi(cur ? `Cancellations · cycle from ${dShort(cur.start)}` : 'Cancellations', cur ? n0(cur.agg.total) : '–', cur ? `${n0(cur.agg.saved)} saved · ${cur.agg.saveRate != null ? Math.round(cur.agg.saveRate) + '% save rate' : ''} · ${n0(cur.agg.open + cur.agg.unprocessed)} open` : 'no data'),
     ));
 
@@ -793,15 +812,14 @@
     const payL = paymentsCard(D, 'leadership'); if (payL) out.push(payL);
     // Charts: daily registrations stacked by college + August pace
     const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = August pace');
-    const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
+    const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle ${cycleLabel(goalMonth)}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
     out.push(el('section', { class: 'grid two' }, c1, c2));
 
     // College cards
     const colleges = Object.values(D.colleges).filter(c => c.name !== 'Unknown').sort((a, b) => b.m.reg - a.m.reg);
     out.push(el('section', { class: 'grid three' }, colleges.map(c => {
       const cz = cur ? cur.agg.byCollege[c.name] || 0 : null;
-      const bankRows = bankMonth && C.raw.bank[bankMonth][c.name];
-      const bColl = bankRows ? bankRows.reduce((a, r) => a + (r.collections || 0), 0) : null;
+      const bColl = cycBank && cycBank[c.name] ? cycBank[c.name].collections : null;
       return el('div', { class: 'card' },
         el('div', { class: 'card-head' }, el('h2', {}, el('span', { class: 'dot ' + collegeClass(c.name) }), ' ', c.name), pill(c.pct != null ? Math.round(c.pct) + '% of pace' : 'no baseline', paceClass(c.pct))),
         el('div', { class: 'row spread' }, el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Month'), el('div', { class: 'value num' }, n0(c.m.reg))), el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Today'), el('div', { class: 'value num' }, n0(c.today))), el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Projected'), el('div', { class: 'value num' }, n0(Math.round(c.projection))))),
@@ -811,7 +829,7 @@
           el('li', {}, el('span', { class: 'muted' }, 'Debit-order rate'), el('span', { class: 'num' }, pct(c.m.do, c.m.reg))),
           el('li', {}, el('span', { class: 'muted' }, 'Upfront cash'), el('span', { class: 'num' }, `${rand(c.m.paid_amt)} · ${pct(c.m.paid_n, c.m.reg)}`)),
           el('li', {}, el('span', { class: 'muted' }, 'Under R700/month'), el('span', { class: 'num' }, pct(c.m.inst.lt400 + c.m.inst.b400_699, c.m.reg))),
-          el('li', {}, el('span', { class: 'muted' }, bankMonth ? `Collections banked · ${MONTHS[+bankMonth.slice(5, 7) - 1]}` : 'Collections banked'), el('span', { class: 'num' }, bColl != null ? randK(bColl) : '–')),
+          el('li', {}, el('span', { class: 'muted' }, `Collections banked · cycle from 8 ${MONTHS[+CYCLE.slice(5, 7) - 1]}`), el('span', { class: 'num' }, bColl != null ? randK(bColl) : '–')),
           el('li', {}, el('span', { class: 'muted' }, 'Cancellation requests this cycle'), el('span', { class: 'num' }, cz != null ? n0(cz) : '–')),
           el('li', {}, el('span', { class: 'muted' }, 'Registrars selling'), el('span', { class: 'num' }, n0(c.people.filter(p => p.m.reg > 0).length))),
         ));
@@ -1019,29 +1037,41 @@
     const a = cur.agg; const out = [];
     const goalMonth = C.goalMonths[C.goalMonths.length - 1];
     const g = goalMonth ? C.raw.goals[goalMonth] : null;
-    const withActual = g ? g.filter(r => r.actual_cum != null) : [];
+    const withActual = g ? g.filter(r => r.actual_cum != null && !r.partial) : [];
     const last = withActual[withActual.length - 1];
     const goalAtDay = last ? g.find(r => r.dom === last.dom).goal_cum : null;
     const bankMonth = C.bankMonths[C.bankMonths.length - 1];
-    const bank = bankMonth ? C.raw.bank[bankMonth] : null;
-    const bankTot = bank ? Object.fromEntries(Object.entries(bank).map(([c, rows]) => [c, rows.reduce((o, r) => ({ sales: o.sales + (r.sales || 0), collections: o.collections + (r.collections || 0), unclaimed: o.unclaimed + (r.unclaimed || 0) }), { sales: 0, collections: 0, unclaimed: 0 })])) : null;
+    const bank = bankMonth ? C.cycleBank(CYCLE) : null; // per college, 8th of the cycle month to the 7th of the next
+    const bankTot = bank ? Object.fromEntries(Object.entries(bank).map(([c, o]) => [c, { sales: o.sales, collections: o.collections, unclaimed: o.unclaimed }])) : null;
     const bankAll = bankTot ? Object.values(bankTot).reduce((o, r) => ({ sales: o.sales + r.sales, collections: o.collections + r.collections, unclaimed: o.unclaimed + r.unclaimed }), { sales: 0, collections: 0, unclaimed: 0 }) : null;
-    const stale = goalMonth && goalMonth < D.month;
+    const stale = goalMonth && goalMonth < CYCLE;
+    // Day view: the latest complete day (yesterday or earlier) against its goal, and the goal for today.
+    const dayGoal = dom => g ? g.find(r => r.dom === dom) : null;
+    const bankDays = bank ? [...new Set(Object.values(bank).flatMap(o => o.days.map(d => d.date)))].sort() : [];
+    const isWeekend = d => [0, 6].includes(new Date(d + 'T00:00:00').getDay());
+    const completeDays = bankDays.filter(d => d < TODAY && !isWeekend(d)); // weekends bank nothing; judge the last banking day
+    const lastDay = completeDays.length ? completeDays[completeDays.length - 1] : null;
+    const dayColl = date => bank ? Object.values(bank).reduce((t, o) => t + o.days.filter(d => d.date === date).reduce((u, d) => u + (d.collections || 0), 0), 0) : null;
+    const lastDayColl = lastDay ? dayColl(lastDay) : null;
+    const lastDayGoal = lastDay ? dayGoal(+lastDay.slice(8, 10)) : null;
+    const todayGoal = dayGoal(+TODAY.slice(8, 10));
     const fc = cashForecast(C);
 
     out.push(el('section', { class: 'grid two' }, actionsCard(D, C, 'collections'), alertsCard(D, C, 'collections')));
     out.push(el('section', { class: 'grid kpis' },
-      kpi(goalMonth ? `Cash vs goal · ${MONTHS_LONG[+goalMonth.slice(5, 7) - 1]} cycle` : 'Cash vs goal', last ? pct(last.actual_cum, goalAtDay) : '–', last ? `${randK(last.actual_cum)} banked by day ${last.dom} vs ${randK(goalAtDay)} planned` : 'no data', stale ? 'bad' : last && last.actual_cum >= goalAtDay ? 'good' : 'warn'),
+      kpi(lastDay ? `${dShort(lastDay)} vs its goal` : 'Latest complete day', lastDayColl != null && lastDayGoal && lastDayGoal.goal_day ? pct(lastDayColl, lastDayGoal.goal_day) : lastDayColl != null ? randK(lastDayColl) : '–', lastDay ? `${randK(lastDayColl)} banked${lastDayGoal && lastDayGoal.goal_day ? ` vs ${randK(lastDayGoal.goal_day)} day goal` : ' · no day goal'} · a day is complete the next day` : 'no bank data', lastDayGoal && lastDayGoal.goal_day ? (lastDayColl >= lastDayGoal.goal_day ? 'good' : lastDayColl >= 0.9 * lastDayGoal.goal_day ? 'warn' : 'bad') : ''),
+      kpi(`Today's goal · ${dShort(TODAY)}`, todayGoal && todayGoal.goal_day != null ? randK(todayGoal.goal_day) : '–', todayGoal ? `cycle ${cycleLabel(goalMonth)} · ${randK(todayGoal.goal_cum)} planned by tonight` : stale ? `no goal tab yet for ${cycleLabel(CYCLE)}` : 'no goal for today', stale ? 'bad' : ''),
+      kpi(goalMonth ? `Cycle cash vs goal · ${cycleLabel(goalMonth)}` : 'Cash vs goal', last ? pct(last.actual_cum, goalAtDay) : '–', last ? `${randK(last.actual_cum)} banked to ${dShort(last.date || cycleDayDate(goalMonth, last.dom))} vs ${randK(goalAtDay)} planned` : 'no data', stale ? 'bad' : last && last.actual_cum >= goalAtDay ? 'good' : 'warn'),
       kpi('Cycle cash forecast', fc ? randK(fc.total) : '–', fc ? `${randK(fc.actual)} by day ${fc.lastDom} · shape of ${fc.cycles} past cycles · goal ${randK(fc.goalTotal)}` : 'needs two completed cycles in the bank tabs', fc && fc.goalTotal ? (fc.total >= fc.goalTotal ? 'good' : fc.total >= 0.9 * fc.goalTotal ? 'warn' : 'bad') : ''),
-      kpi(bankMonth ? `Collections banked · ${MONTHS[+bankMonth.slice(5, 7) - 1]}` : 'Collections banked', bankAll ? randK(bankAll.collections) : '–', bankAll ? `+ ${randK(bankAll.sales)} sales cash · ${randK(bankAll.unclaimed)} unclaimed` : '', stale ? 'bad' : ''),
+      kpi(`Collections banked · cycle ${cycleLabel(CYCLE)}`, bankAll ? randK(bankAll.collections) : '–', bankAll ? `+ ${randK(bankAll.sales)} sales cash · ${randK(bankAll.unclaimed)} unclaimed · to yesterday` : '', bankMonth && bankMonth < CYCLE ? 'bad' : ''),
       kpi(`Cancellation requests · from ${dShort(cur.start)}`, n0(a.total), prev ? `${n0(prev.agg.total)} in the previous cycle` : ''),
       kpi('Save rate', a.saveRate != null ? Math.round(a.saveRate) + '%' : '–', `${n0(a.saved)} saved of ${n0(a.decided)} decided${prev && prev.agg.saveRate != null ? ' · prev ' + Math.round(prev.agg.saveRate) + '%' : ''}`, a.saveRate != null && prev && prev.agg.saveRate != null ? (a.saveRate >= prev.agg.saveRate ? 'good' : 'bad') : ''),
       kpi('Open cases', n0(a.open + a.unprocessed), `${n0(a.open)} not finalised · ${n0(a.unprocessed)} logged, not yet worked`, a.unprocessed > 20 ? 'warn' : ''),
       kpi('Reached on first call', pct(cur.rows.filter(r => r.attempts[0] && /success/i.test(r.attempts[0])).length, cur.rows.filter(r => r.attempts.length).length), `${n0(a.contacts)} successful of ${n0(a.attempts)} attempts · ${n0(a.offers)} offers made`),
     ));
 
-    const { card: c1, canvas: cv1 } = chartCard(goalMonth ? `Cash goal vs actual · cycle from 8 ${MONTHS[+goalMonth.slice(5, 7) - 1]}` : 'Cash goal vs actual', goalMonth ? goalNote(g, goalMonth, D) : '');
-    const { card: c2, canvas: cv2 } = chartCard(bankMonth ? `Daily collections banked by college · ${monthLabel(bankMonth)}` : 'Daily collections banked', 'from the bank tabs');
+    const { card: c1, canvas: cv1 } = chartCard(goalMonth ? `Cash goal vs actual · cycle ${cycleLabel(goalMonth)}` : 'Cash goal vs actual', goalMonth ? goalNote(g, goalMonth, D) : '');
+    const { card: c2, canvas: cv2 } = chartCard(`Daily collections banked by college · cycle ${cycleLabel(CYCLE)}`, 'from the bank tabs · today is incomplete until tomorrow');
     out.push(el('section', { class: 'grid two' }, c1, c2));
 
     // Category / college / trend
@@ -1094,8 +1124,8 @@
       ].filter(Boolean) }, options: { maintainAspectRatio: false, scales: { x: { grid: { display: false }, title: { display: true, text: 'day of month' } }, y: { ticks: { callback: v => randK(v) } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${rand(c.parsed.y)}` } } } } });
       else cv1.replaceWith(el('div', { class: 'empty' }, 'No goal data'));
       if (bank) {
-        const doms = [...new Set(Object.values(bank).flat().map(r => r.dom))].sort((x, y) => x - y);
-        chart(cv2, { type: 'bar', data: { labels: doms.map(d => `${d} ${MONTHS[+bankMonth.slice(5, 7) - 1]}`), datasets: Object.entries(bank).map(([c, rows]) => ({ label: c, data: doms.map(d => { const r = rows.find(x => x.dom === d); return r ? r.collections || 0 : 0; }), backgroundColor: collegeColor(c), stack: 's' })) },
+        const days = bankDays;
+        chart(cv2, { type: 'bar', data: { labels: days.map(d => dShort(d) + (d >= TODAY ? ' (partial)' : '')), datasets: Object.entries(bank).map(([c, o]) => ({ label: c, data: days.map(d => o.days.filter(x => x.date === d).reduce((u, x) => u + (x.collections || 0), 0)), backgroundColor: collegeColor(c), stack: 's' })) },
           options: { maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => randK(v) } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${rand(c.parsed.y)}` } } } } });
       } else cv2.replaceWith(el('div', { class: 'empty' }, 'No bank data'));
       const dayKeys = Object.keys(a.byDay).filter(d => d >= cur.start && d <= cur.end).sort();
