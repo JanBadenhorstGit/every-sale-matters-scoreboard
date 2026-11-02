@@ -159,3 +159,13 @@ leadership action when a registrar with 40+ matched sales pays 12 points or more
 
 First reading (report to 31 Oct 2026): of August sales, 44% have paid anything and 1,603 of 3,165
 never paid; registrars range from 24% to 80% on the same month's sales.
+
+### v2.8 — paid landing pages: what a registration costs (`ads.json → pages`)
+
+Google Ads spend per landing page (ad-level final URLs for Search and Demand Gen; campaign spend for
+Performance Max) for 17 Sep – 31 Oct 2026, joined to CRM enquiries carrying that page as Source Page and
+to the registration sheets. Per page: spend, leads, registrations, rand per registration (red at twice the
+college median, "none" when no registration), share of enquirers answering "I have no funds", share
+answering "Still at High School", and the conversion of enquirers who do have funds. Shown on the
+Marketing view. Snapshot; refreshed together with ads.json. Bellview's course pages (OHS, Business)
+cannot be judged yet: most Bellview PPC enquiries carry no Source Page.

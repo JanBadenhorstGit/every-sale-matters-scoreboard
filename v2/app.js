@@ -1265,6 +1265,20 @@
     out.push(el('section', { class: 'grid two' }, speedCard(L, 'college'), ageCard));
     out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Landing pages'), el('span', { class: 'xs muted' }, `top 25 pages by leads · last ${L.window.days} days`)), sortableTable(pcols, prow, 'leads'),
       el('p', { class: 'note' }, 'vs college = page conversion ÷ the college average. WhatsApp pages usually win; paid-landing pages with ▼ need a form or offer test (log it in the Tests register).')));
+    // v2.8: paid landing pages — ad spend per page joined to CRM leads and registrations
+    if (S.ads && S.ads.pages && S.ads.pages.rows) {
+      const PG = S.ads.pages; const rows = PG.rows.filter(r => r.leads >= 20 && r.spend >= 1000);
+      const colMed = {}; for (const c of new Set(rows.map(r => r.college))) { const xs = rows.filter(r => r.college === c && r.r_reg).map(r => r.r_reg).sort((a, b) => a - b); colMed[c] = xs.length ? xs[Math.floor(xs.length / 2)] : null; }
+      const cols = [{ key: 'page', label: 'Landing page', render: v => el('span', { title: v }, v.replace(/^(skillsacademy|matric|bellview)\/(offers\/)?/, '')) }, { key: 'college', label: 'College', fmt: v => v.split(' ')[0] }, { key: 'camp', label: 'Campaign', render: v => el('span', { class: 'xs muted', title: v }, (v || '').slice(0, 26)) },
+        { key: 'spend', label: 'Spend', num: true, fmt: randK }, { key: 'leads', label: 'Leads', num: true }, { key: 'reg', label: 'Reg.', num: true },
+        { key: 'r_reg', label: 'R per reg.', num: true, render: (v, r) => { const m = colMed[r.college]; return el('span', { class: v == null ? 'bad' : m && v > 2 * m ? 'bad' : m && v > 1.3 * m ? 'warn' : m && v < 0.8 * m ? 'good' : '' }, v == null ? 'none' : rand(v)); } },
+        { key: 'nofunds', label: 'No funds', num: true, render: v => el('span', { class: v >= 60 ? 'bad' : v >= 50 ? 'warn' : '' }, v + '%') }, { key: 'school', label: 'At school', num: true, render: v => el('span', { class: v >= 30 ? 'bad' : v >= 15 ? 'warn' : '' }, v + '%') },
+        { key: 'funds_conv', label: 'Funded conv.', num: true, fmt: v => v == null ? '–' : n1(v) + '%' }];
+      const rr = rows.map(r => ({ ...r, r_reg: r.r_reg == null ? null : r.r_reg }));
+      out.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Paid landing pages · what a registration costs'), el('span', { class: 'xs muted' }, `${dShort(PG.window.from)} – ${dShort(PG.window.to)} · pages with 20+ leads and R1,000+ spend · sorted by spend`)),
+        el('div', { class: 'table-wrap dense' }, sortableTable(cols, rr, 'spend')),
+        el('p', { class: 'note' }, 'Spend is Google Ads spend on ads whose final URL is this page (Performance Max: campaign spend). Leads and registrations are CRM enquiries carrying the page as Source Page. R per reg. is red at twice the college median, "none" when the page produced no registration. No funds = share of enquirers answering "I have no funds"; At school = share answering "Still at High School". Funded conv. = conversion of enquirers who do have funds, so a low figure here is the page or traffic, not the audience’s wallet. Snapshot refreshed with ads.json.')));
+    }
     // traffic-source quality (referrer groups; flags display-placement leads that never register)
     const SRC = L.sources || null;
     if (SRC) {
