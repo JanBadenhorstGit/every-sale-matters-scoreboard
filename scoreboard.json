@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-02T05:46:36",
+ "generated_at": "2026-11-02T07:16:16",
  "latest_day": "2026-11-02",
  "month": "2026-11",
  "config_stale": false,
@@ -54,14 +54,14 @@
    "name": "Andre",
    "college": "Skills Academy",
    "aug_per_day": 2.6,
-   "today": 0,
+   "today": 2,
    "yesterday": 3,
-   "week": 0,
-   "month": 0,
+   "week": 2,
+   "month": 2,
    "best_day": 19,
    "prev_best": 19,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 2,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -69,7 +69,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 23
    }
   },
   {
@@ -186,14 +186,14 @@
    "name": "Liza",
    "college": "Skills Academy",
    "aug_per_day": 6.5,
-   "today": 0,
+   "today": 5,
    "yesterday": 5,
-   "week": 0,
-   "month": 0,
+   "week": 5,
+   "month": 5,
    "best_day": 14,
    "prev_best": 14,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 5,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -201,21 +201,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 20
    }
   },
   {
    "name": "Christinah",
    "college": "Bellview Inst.",
    "aug_per_day": 4.5,
-   "today": 0,
+   "today": 1,
    "yesterday": 1,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -223,7 +223,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   },
   {
@@ -296,10 +296,10 @@
    "name": "Debbie",
    "college": "Skills Academy",
    "aug_per_day": 2.8,
-   "today": 0,
+   "today": 1,
    "yesterday": 3,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 6,
    "prev_best": 6,
    "incentive": {
@@ -494,14 +494,14 @@
    "name": "Nompumelelo",
    "college": "Bellview Inst.",
    "aug_per_day": 5.2,
-   "today": 0,
+   "today": 1,
    "yesterday": 0,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -509,7 +509,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   },
   {
@@ -604,14 +604,14 @@
    "name": "Eno",
    "college": "Bellview Inst.",
    "aug_per_day": 3.65,
-   "today": 0,
+   "today": 2,
    "yesterday": 4,
-   "week": 0,
-   "month": 0,
+   "week": 2,
+   "month": 2,
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 2,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -619,7 +619,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 23
    }
   },
   {
@@ -714,14 +714,14 @@
    "name": "Christa",
    "college": "Skills Academy",
    "aug_per_day": 3.45,
-   "today": 0,
+   "today": 1,
    "yesterday": 2,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -729,7 +729,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   },
   {
@@ -757,16 +757,16 @@
  ],
  "colleges": {
   "Bellview Inst.": {
-   "now": 0,
+   "now": 4,
    "expected": 39.85,
    "aug_per_day": 39.85,
-   "pct": 0.0
+   "pct": 10.037641154328734
   },
   "Skills Academy": {
-   "now": 0,
+   "now": 9,
    "expected": 75.64999999999999,
    "aug_per_day": 75.64999999999999,
-   "pct": 0.0
+   "pct": 11.896893588896235
   },
   "Matric College": {
    "now": 0,
