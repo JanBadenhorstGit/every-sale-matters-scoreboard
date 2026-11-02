@@ -30,6 +30,8 @@ COL_PAID, COL_DO, COL_STATUS = 10, 11, 12
 COL_FP_DATE, COL_FP_AMT, COL_PARGO = 13, 14, 17
 COL_COURSE = 7
 
+ONCE_OFF_MIN = 3000.0  # a "1st Payment" above this is a once-off (full fee / large deposit), not a monthly instalment
+
 INSTALMENT_BANDS = [("lt400", 0, 400), ("b400_699", 400, 700), ("b700_1499", 700, 1500), ("ge1500", 1500, 10**9)]
 LEADTIME_BANDS = [("le7", -10**6, 8), ("d8_14", 8, 15), ("d15_30", 15, 31), ("gt30", 31, 10**6)]
 
@@ -88,7 +90,9 @@ def empty_rec():
     r = {"reg": 0, "do": 0, "paid_n": 0, "paid_amt": 0.0, "digital": 0, "pup": 0,
          "inst": {k: 0 for k, _, _ in INSTALMENT_BANDS} | {"unknown": 0},
          "lead": {k: 0 for k, _, _ in LEADTIME_BANDS} | {"unknown": 0},
-         "inst_sum": 0.0, "inst_n": 0}
+         "inst_sum": 0.0, "inst_n": 0,
+         # once-off first payments (> ONCE_OFF_MIN): count, amount agreed, and the part not yet in the Paid column
+         "once_n": 0, "once_amt": 0.0, "once_due": 0.0}
     return r
 
 
@@ -150,6 +154,15 @@ def parse_day_tab(ws, tab_date):
         inst = parse_amount(v1.g(r, COL_FP_AMT))
         if inst and inst > 20000:
             inst = None  # a 6-figure 'monthly instalment' is a capture error (e.g. ID number in the amount column)
+        once = None
+        if inst and inst > ONCE_OFF_MIN:
+            # ICB / Nated / some Matric sales are paid as one amount (R3,000-R14,800). Treat as a once-off:
+            # value it at the amount paid, show it under upfront cash, keep it out of the instalment average.
+            once, inst = inst, None
+            rec["once_n"] += 1
+            rec["once_amt"] += once
+            if not (paid and paid > 0):
+                rec["once_due"] += once  # not yet reflected in the Paid column (first-payment date still ahead)
         rec["inst"][band(inst, INSTALMENT_BANDS)] += 1
         if inst:
             rec["inst_sum"] += inst
@@ -160,7 +173,8 @@ def parse_day_tab(ws, tab_date):
         course = re.sub(r"\s+", " ", str(v1.g(r, COL_COURSE)).strip())[:60]
         if course:
             c = courses.setdefault(course, {"n": 0, "do": 0, "paid_n": 0, "paid_amt": 0.0,
-                                            "inst_sum": 0.0, "inst_n": 0, "college": current_college})
+                                            "inst_sum": 0.0, "inst_n": 0, "once_n": 0, "once_amt": 0.0, "once_due": 0.0,
+                                            "college": current_college})
             c["n"] += 1
             c["do"] += 1 if str(v1.g(r, COL_DO)).strip().upper() == "X" else 0
             if paid and paid > 0:
@@ -169,6 +183,11 @@ def parse_day_tab(ws, tab_date):
             if inst:
                 c["inst_sum"] += inst
                 c["inst_n"] += 1
+            if once:
+                c["once_n"] += 1
+                c["once_amt"] += once
+                if not (paid and paid > 0):
+                    c["once_due"] += once
     return recs, college_of, courses
 
 
@@ -214,11 +233,13 @@ def rollup_courses(courses):
         month = day[:7]
         for name, v in mix.items():
             if not isinstance(v, dict):
-                v = {"n": v, "do": 0, "paid_n": 0, "paid_amt": 0.0, "inst_sum": 0.0, "inst_n": 0, "college": None}
+                v = {"n": v, "do": 0, "paid_n": 0, "paid_amt": 0.0, "inst_sum": 0.0, "inst_n": 0,
+                     "once_n": 0, "once_amt": 0.0, "once_due": 0.0, "college": None}
             dept, fam, variant = course_family(name)
             f = out.setdefault(month, {}).setdefault(fam, {"dept": dept, "n": 0, "do": 0, "paid_n": 0, "paid_amt": 0.0,
-                                                            "inst_sum": 0.0, "inst_n": 0, "colleges": {}, "variants": {}})
-            for k in ("n", "do", "paid_n", "paid_amt", "inst_sum", "inst_n"):
+                                                            "inst_sum": 0.0, "inst_n": 0, "once_n": 0, "once_amt": 0.0, "once_due": 0.0,
+                                                            "colleges": {}, "variants": {}})
+            for k in ("n", "do", "paid_n", "paid_amt", "inst_sum", "inst_n", "once_n", "once_amt", "once_due"):
                 f[k] += v.get(k, 0) or 0
             if v.get("college"):
                 f["colleges"][v["college"]] = f["colleges"].get(v["college"], 0) + v["n"]

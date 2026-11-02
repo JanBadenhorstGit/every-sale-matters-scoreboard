@@ -1,4 +1,4 @@
-/* Every Sale Matters v2 — role-based sales & collections scoreboard.
+/* Casus Radar (Every Sale Matters v2) — role-based sales & collections scoreboard.
    Reads data/sales.json (public sheets, refreshed by GitHub Actions) and
    data/collections.json (internal sheets, refreshed by a trusted task). */
 (() => {
@@ -92,11 +92,11 @@
     const prevMonth = (() => { const [y, m] = month.split('-').map(Number); const d = new Date(Date.UTC(y, m - 2, 1)); return d.toISOString().slice(0, 7); })();
     const prevMonthDays = days.filter(d => d.startsWith(prevMonth));
 
-    const zero = () => ({ reg: 0, do: 0, paid_n: 0, paid_amt: 0, digital: 0, pup: 0, inst_sum: 0, inst_n: 0,
+    const zero = () => ({ reg: 0, do: 0, paid_n: 0, paid_amt: 0, digital: 0, pup: 0, inst_sum: 0, inst_n: 0, once_n: 0, once_amt: 0, once_due: 0,
       inst: { lt400: 0, b400_699: 0, b700_1499: 0, ge1500: 0, unknown: 0 }, lead: { le7: 0, d8_14: 0, d15_30: 0, gt30: 0, unknown: 0 } });
     const add = (a, r) => {
       if (!r) return a;
-      for (const k of ['reg', 'do', 'paid_n', 'paid_amt', 'digital', 'pup', 'inst_sum', 'inst_n']) a[k] += r[k] || 0;
+      for (const k of ['reg', 'do', 'paid_n', 'paid_amt', 'digital', 'pup', 'inst_sum', 'inst_n', 'once_n', 'once_amt', 'once_due']) a[k] += r[k] || 0;
       for (const k in a.inst) a.inst[k] += (r.inst && r.inst[k]) || 0;
       for (const k in a.lead) a.lead[k] += (r.lead && r.lead[k]) || 0;
       return a;
@@ -427,7 +427,7 @@
     for (const [src, w] of [[cm, 'm'], [pm, 'p']]) for (const v of Object.values(src)) { const d = depts[v.dept] ||= { dept: v.dept, m: 0, p: 0, do: 0, inst: 0, paid: 0 }; d[w] += v.n; if (w === 'm') { d.do += v.do; d.inst += v.inst_sum; d.paid += v.paid_amt; } }
     const deptRows = DEPT_ORDER.filter(d => depts[d]).map(d => { const x = depts[d]; const cz = cancelsByDept[d] || 0; return { ...x, cancels: cur ? cz : null, per100: cur && (x.m + x.p) ? 100 * cz / (x.m + x.p) : null, doRate: pctN(x.do, x.m) }; });
     const total = Object.values(cm).reduce((a, v) => a + v.n, 0);
-    const famRows = Object.entries(cm).map(([fam, v]) => ({ fam, dept: v.dept, n: v.n, share: 100 * v.n / total, doRate: pctN(v.do, v.n), avgInst: v.inst_n ? v.inst_sum / v.inst_n : null, monthly: v.inst_sum, upfront: v.paid_amt, paidRate: pctN(v.paid_n, v.n), college: Object.entries(v.colleges || {}).sort((a, b) => b[1] - a[1]).map(x => x[0])[0] || '', variants: v.variants || {} })).filter(r => r.n >= 5);
+    const famRows = Object.entries(cm).map(([fam, v]) => ({ fam, dept: v.dept, n: v.n, share: 100 * v.n / total, doRate: pctN(v.do, v.n), avgInst: v.inst_n ? v.inst_sum / v.inst_n : null, monthly: v.inst_sum, upfront: upfrontCash(v), onceN: v.once_n || 0, paidRate: pctN(v.paid_n, v.n), college: Object.entries(v.colleges || {}).sort((a, b) => b[1] - a[1]).map(x => x[0])[0] || '', variants: v.variants || {} })).filter(r => r.n >= 5);
     const strip = el('div', { class: 'grid five', style: 'margin-bottom:12px' }, deptRows.map(d => el('div', { class: 'kpi mini' }, el('div', { class: 'label' }, d.dept), el('div', { class: 'value num' }, n0(d.m)), el('div', { class: 'sub' }, `D/O ${d.doRate == null ? '–' : Math.round(d.doRate) + '%'} · ${randK(d.inst)}/month signed`, d.cancels != null ? el('span', { class: d.per100 > 8 ? ' bad' : '' }, ` · ${n0(d.cancels)} cancel req. (${d.per100 == null ? '–' : n1(d.per100)}/100)`) : null))));
     const table = sortableTable([
       { key: 'fam', label: 'Course family', render: (v, r) => el('span', {}, v, ' ', el('span', { class: 'faint xs' }, r.dept)) },
@@ -437,10 +437,11 @@
       { key: 'avgInst', label: 'Avg inst.', num: true, fmt: rand },
       { key: 'monthly', label: 'Monthly value signed', num: true, fmt: randK },
       { key: 'upfront', label: 'Upfront cash', num: true, fmt: randK },
+      { key: 'onceN', label: 'Once-off', num: true, fmt: n0 },
       { key: 'paidRate', label: 'Paid upfront', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' },
     ], famRows, 'n');
     return el('section', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, `Course economics · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`), el('span', { class: 'xs muted' }, 'cancellation requests this cycle per 100 sales of this + last month')), strip, table,
-      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'Monthly value signed = sum of first-instalment amounts captured on this month\u2019s sales (recurring value at risk if students lapse). The cancellation sheet records course type only (Matric, Provider, QCTO, ICB, Nated), so cancellations are matched at that level. Families with fewer than 5 sales are hidden.'));
+      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'Monthly value signed = sum of first-instalment amounts captured on this month\u2019s sales (recurring value at risk if students lapse). A first payment above R3,000 is treated as a once-off (full fee or large deposit): it is counted under Upfront cash and Once-off, not in the instalment average. The cancellation sheet records course type only (Matric, Provider, QCTO, ICB, Nated), so cancellations are matched at that level. Families with fewer than 5 sales are hidden.'));
   }
 
   function trendCard(D, C) {
@@ -449,7 +450,7 @@
       const ds = D.days.filter(d => d.startsWith(m)); const agg = D.zero(); for (const d of ds) for (const k in D.raw.days[d]) D.add(agg, D.raw.days[d][k]);
       const bank = C && C.raw.bank[m] ? Object.values(C.raw.bank[m]).flat().reduce((a, r) => a + (r.collections || 0), 0) : null;
       const cyc = C ? C.cycles.find(k => k.startsWith(m)) : null; const cz = cyc ? C.perCycle[cyc].agg : null;
-      return { m, label: monthLabel(m), reg: agg.reg, perDay: agg.reg / ds.length, doRate: pctN(agg.do, agg.reg), upfront: agg.paid_amt, avgInst: agg.inst_n ? agg.inst_sum / agg.inst_n : null, bank, cancels: cz ? cz.total : null, saveRate: cz ? cz.saveRate : null, days: ds.length };
+      return { m, label: monthLabel(m), reg: agg.reg, perDay: agg.reg / ds.length, doRate: pctN(agg.do, agg.reg), upfront: upfrontCash(agg), avgInst: agg.inst_n ? agg.inst_sum / agg.inst_n : null, bank, cancels: cz ? cz.total : null, saveRate: cz ? cz.saveRate : null, days: ds.length };
     });
     return el('section', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Month by month'), el('span', { class: 'xs muted' }, 'cancel req. = requests in the cycle starting on the 8th of that month · history is kept after sheets are archived')),
       sortableTable([
@@ -472,7 +473,7 @@
   }
   function incentiveExportCard(D) {
     const wk = D.raw.incentive_week_days || [];
-    const rows = D.people.filter(p => p.incentive).map(p => [p.name, p.college, p.incentive.debit_orders, p.incentive.enrolment_incentive, p.incentive.cash_collected, p.incentive.cash_incentive, p.incentive.total, p.m.reg, p.m.do, Math.round(p.m.paid_amt)]);
+    const rows = D.people.filter(p => p.incentive).map(p => [p.name, p.college, p.incentive.debit_orders, p.incentive.enrolment_incentive, p.incentive.cash_collected, p.incentive.cash_incentive, p.incentive.total, p.m.reg, p.m.do, Math.round(upfrontCash(p.m))]);
     const header = ['Registrar', 'College', 'Debit orders (week)', 'Enrolment incentive', 'Cash collected (week)', 'Cash incentive', 'Incentive total (week)', `Registrations ${D.month}`, `Debit orders ${D.month}`, `Upfront cash ${D.month}`];
     const total = rows.reduce((a, r) => a + (r[6] || 0), 0);
     return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Incentive export'), el('span', { class: 'xs muted' }, wk.length ? `week of ${dShort(wk[0])}` : '')),
@@ -519,12 +520,14 @@
     out._team = D.team.avgInst;
     return out;
   }
+  // Upfront cash = amounts in the Paid column + once-off first payments (> R3,000) whose payment date is still ahead.
+  function upfrontCash(m) { return (m.paid_amt || 0) + (m.once_due || 0); }
   // Expected 12-month cash from this month's sales: monthly value signed × 12 × (1 − cancellation rate) + upfront cash.
   // Cancellation rate = requests per 100 sales over this + last cycle, capped at 50%. An estimate, not a forecast of what will bank.
   function expectedCash(p, cancels) {
     const base = (p.m.reg || 0) + (p.pm ? p.pm.reg : 0);
     const rate = base ? Math.min(0.5, (cancels || 0) / base) : 0;
-    return (p.m.inst_sum || 0) * 12 * (1 - rate) + (p.m.paid_amt || 0);
+    return (p.m.inst_sum || 0) * 12 * (1 - rate) + upfrontCash(p.m);
   }
   const HORIZON = 12; // months of instalments used to value a student
 
@@ -537,7 +540,7 @@
       ['Registrations', n0(t.m.reg), `${D.recorded} of ${D.workDays} days`],
       ['× Debit-order rate', pct(t.m.do, t.m.reg), `${n0(t.m.reg - t.m.do)} sales without a D/O`],
       ['− Cancelled this cycle', cancelled != null ? n0(cancelled) : '–', cur ? `${n0(cur.agg.saved)} saved · ${n0(cur.agg.open + cur.agg.unprocessed)} still open` : 'no data'],
-      ['Upfront cash', randK(t.m.paid_amt), `${n0(t.m.paid_n)} sales paid something upfront`],
+      ['Upfront cash', randK(upfrontCash(t.m)), `${n0(t.m.paid_n)} sales paid something upfront${t.m.once_n ? ` · ${n0(t.m.once_n)} once-off (${randK(t.m.once_amt)})` : ''}`],
     ];
     return el('section', { class: 'card north' },
       el('div', { class: 'north-main' },
@@ -561,7 +564,7 @@
     const cz = cancelsByRegistrar(C);
     const regs = D.people.filter(p => p.m.reg > 0).map(p => ({ name: p.name, count: p.m.reg, cash: expectedCash(p, cz[firstName(p.name)]) }));
     const cm = (D.raw.course_months || {})[D.month] || {};
-    const courses = Object.entries(cm).map(([fam, v]) => ({ name: fam, count: v.n, cash: v.inst_sum * HORIZON + (v.paid_amt || 0) }));
+    const courses = Object.entries(cm).map(([fam, v]) => ({ name: fam, count: v.n, cash: v.inst_sum * HORIZON + upfrontCash(v) }));
     const pr = pareto(regs, 'count', 'cash'); const pc = pareto(courses, 'count', 'cash');
     const block = (title, p, unit) => !p ? el('div', { class: 'empty' }, 'not enough data') : el('div', { class: 'pareto' },
       el('h3', {}, title, ' ', el('span', { class: 'xs muted' }, `${p.n} ${unit}`)),
@@ -572,7 +575,7 @@
         el('span', { class: 'xs faint names' }, lab === 'Bottom 50%' ? '' : s.names.slice(0, 4).join(', ') + (s.names.length > 4 ? ` +${s.names.length - 4}` : '')))));
     return el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, '80/20'), el('span', { class: 'xs muted' }, 'this month · cash = expected 12-month value')),
       block('Registrars', pr, 'registrars'), block('Course families', pc, 'families'), S.leads ? block('Lead channels', pareto(channelRows(S.leads, D.month), 'count', 'cash'), 'channels') : null,
-      el('p', { class: 'note' }, 'Cash = monthly instalments signed × 12 × (1 − cancellation rate) + upfront. Lead channels = college × source from the CRM; details on the Marketing view.'));
+      el('p', { class: 'note' }, 'Cash = monthly instalments signed × 12 × (1 − cancellation rate) + upfront (incl. once-off fees above R3,000). Lead channels = college × source from the CRM; details on the Marketing view.'));
   }
 
   // Today's three: alerts and gaps ranked by estimated cash impact (12 months of instalments per student).

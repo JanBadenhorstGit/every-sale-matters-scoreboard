@@ -1,8 +1,12 @@
-# Sales scoreboard — every sale matters
+# Casus Radar — every sale matters
 
-A public, self-updating sales scoreboard for the team.
+A public, self-updating sales and collections scoreboard for the team.
 
-- `index.html` — the scoreboard page (person picker, Today/Yesterday/Week/Month, league, colleges, weekly incentives).
+**Since 2 Nov 2026 the root page (`index.html`) opens the role-based board in `v2/` (Casus Radar).**
+The original one-page scoreboard lives on at `classic/` until 16 Nov 2026 and is then retired.
+Planned address: `radar.casus.co.za` (CNAME to `janbadenhorstgit.github.io`, DNS managed by Jephta).
+
+- `classic/index.html` — the original scoreboard page (person picker, Today/Yesterday/Week/Month, league, colleges, weekly incentives).
 - `scoreboard.json` — the latest computed numbers (regenerated hourly during work hours).
 - `scoreboard_pipeline.py` — reads the team's public Google Sheets and applies the comparison-report counting rules. It picks the current month's Registration and incentive sheets from `MONTH_SHEETS` automatically (South Africa time); **before the 1st of each month, add the new month's two sheet IDs to `MONTH_SHEETS` and share both sheets as "anyone with the link: viewer"**. If the current month is missing, the run uses the latest month available and prints a WARNING, and `scoreboard.json` carries `config_stale: true`.
 - `.github/workflows/refresh.yml` — hourly refresh in the cloud (Mon–Fri, South African work hours).
@@ -31,7 +35,10 @@ and Collections Agent, served from the same repository at `/v2/`.
   (`#role=sales-agent&who=kenneth`) so each registrar can bookmark their own page.
 - `v2/pipeline_sales.py` — runs the v1 pipeline, then records per-day, per-registrar sale detail
   (debit-order mandate, upfront cash, monthly instalment band, first-payment lead time, digital vs
-  pick-up) into `v2/data/sales.json`. Earlier months are kept in that file, so a month survives
+  pick-up) into `v2/data/sales.json`. A "1st Payment" above R3,000 (ICB and Nated full fees, some
+  Matric deposits) is a once-off, not a monthly instalment: it is valued at the amount paid, shown
+  under upfront cash (`once_n`, `once_amt`, and `once_due` for the part not yet in the Paid column),
+  and left out of the instalment average, so 12-month valuations no longer multiply a full fee by 12. Earlier months are kept in that file, so a month survives
   even when its sheet is no longer shared. Registrars who sell but are not on the comparison-sheet
   roster are included with the college of the sheet section they appear in.
 - `v2/pipeline_collections.py` — reads two **internal** sheets (Collections Daily Goal, 2026

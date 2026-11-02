@@ -23,7 +23,7 @@ def main(sales, coll, leads=None):
     def tot(recs, f): return sum(r[f] for r in recs)
     m_recs = [r for d in days.values() for r in d.values()]
     t_recs = list(today.values())
-    m_reg, m_do, m_paid_n, m_paid = tot(m_recs, 'reg'), tot(m_recs, 'do'), tot(m_recs, 'paid_n'), tot(m_recs, 'paid_amt')
+    m_reg, m_do, m_paid_n, m_paid = tot(m_recs, 'reg'), tot(m_recs, 'do'), tot(m_recs, 'paid_n'), tot(m_recs, 'paid_amt') + tot(m_recs, 'once_due')
     t_reg, t_do = tot(t_recs, 'reg'), tot(t_recs, 'do')
     recorded = len(days)
     aug_per_day = sum(p.get('aug_per_day') or 0 for p in S['roster'])
@@ -115,7 +115,7 @@ def main(sales, coll, leads=None):
             acts.append(((save_rate - sv / (sv + cn)) * n * team_avg * H, f"Coach {ag}: save rate {100*sv/(sv+cn):.0f}% vs team {100*save_rate:.0f}% on {n} cases"))
     acts.sort(key=lambda x: -x[0])
     L = []
-    L.append(f"Every Sale Matters · highlights to {dl}")
+    L.append(f"Casus Radar · highlights to {dl}")
     L.append('')
     L.append("TODAY'S THREE (ranked by estimated cash impact)")
     for imp, txt in acts[:3]: L.append(f"- {txt} · ≈ R{imp/1e3:.0f}k")
