@@ -74,11 +74,11 @@
 
   // ---------- derived sales data ----------
   function buildSales(raw) {
-    const days = Object.keys(raw.days).sort();
+    const latest = raw.latest_day;
+    const days = Object.keys(raw.days).filter(d => d <= latest).sort();  // future (empty) tabs are not days
     const month = raw.month;
     const monthDays = days.filter(d => d.startsWith(month));
-    const latest = raw.latest_day;
-    const yesterday = monthDays[monthDays.indexOf(latest) - 1] || null;
+    const yesterday = days[days.indexOf(latest) - 1] || null;  // on the 1st working day this is last month's last day
     const lt = new Date(latest + 'T00:00:00');
     const monday = new Date(lt); monday.setDate(lt.getDate() - ((lt.getDay() + 6) % 7));
     const mondayIso = monday.toISOString().slice(0, 10);

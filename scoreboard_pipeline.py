@@ -286,11 +286,15 @@ def main():
     if not curr_days:
         print("WARNING: no daily tabs in current month sheet", file=sys.stderr)
         curr_days = prev_days
-    latest = max(curr_days)
+    # the month's sheet is created with every working day's tab up front, so 'latest' must be the last tab
+    # on or before today, not the last tab in the book (otherwise an empty 30 Nov tab becomes 'today' on 2 Nov)
+    _today = date.today()
+    latest = max([d for d in curr_days if d <= _today] or [min(curr_days)])
     today_counts = curr_days[latest]["reg"]
 
-    day_list = sorted(curr_days)
-    yesterday = day_list[-2] if len(day_list) >= 2 else None
+    day_list = sorted(d for d in curr_days if d <= latest)  # future tabs (empty) are not part of any period
+    _before = sorted(d for d in all_days if d < latest)
+    yesterday = _before[-1] if _before else None  # may fall in the previous month on the 1st working day
 
     def period_days(period):
         if period == "today":
@@ -314,7 +318,7 @@ def main():
     periods = {}
     for p in ("today", "yesterday", "week", "month"):
         days = period_days(p)
-        counts = sum_period(days, curr_days)
+        counts = sum_period(days, all_days if p == "yesterday" else curr_days)
         periods[p] = {
             "recorded_days": len(days),
             "days": [d.isoformat() for d in days],

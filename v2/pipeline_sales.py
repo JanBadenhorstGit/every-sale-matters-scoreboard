@@ -275,6 +275,8 @@ def main():
         except Exception as e:  # noqa: BLE001
             print(f"could not read previous sales.json: {e}", file=sys.stderr)
     days = {**old, **fresh_days}
+    # month sheets carry every working day's tab from day one; drop the empty future tabs
+    days = {d: v for d, v in days.items() if d <= base["latest_day"]}
     courses = {**old_courses, **fresh_courses}
 
     # 4. Roster: v1 people carry college + August baseline + this week's incentive.

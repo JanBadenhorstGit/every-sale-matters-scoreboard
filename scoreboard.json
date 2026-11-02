@@ -1,9 +1,9 @@
 {
- "generated_at": "2026-11-02T05:15:43",
- "latest_day": "2026-11-30",
+ "generated_at": "2026-11-02T05:18:30",
+ "latest_day": "2026-11-02",
  "month": "2026-11",
  "config_stale": false,
- "month_recorded_days": 20,
+ "month_recorded_days": 1,
  "aug_recorded_days": 20,
  "people": [
   {
@@ -33,7 +33,7 @@
    "college": "Bellview Inst.",
    "aug_per_day": 1.6,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 3,
    "week": 0,
    "month": 0,
    "best_day": 6,
@@ -55,7 +55,7 @@
    "college": "Skills Academy",
    "aug_per_day": 2.6,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 3,
    "week": 0,
    "month": 0,
    "best_day": 19,
@@ -121,7 +121,7 @@
    "college": "Skills Academy",
    "aug_per_day": 1.65,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 4,
@@ -143,7 +143,7 @@
    "college": "Skills Academy",
    "aug_per_day": 3.9,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 4,
    "week": 0,
    "month": 0,
    "best_day": 10,
@@ -187,7 +187,7 @@
    "college": "Skills Academy",
    "aug_per_day": 6.5,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 5,
    "week": 0,
    "month": 0,
    "best_day": 14,
@@ -209,7 +209,7 @@
    "college": "Bellview Inst.",
    "aug_per_day": 4.5,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 1,
    "week": 0,
    "month": 0,
    "best_day": 8,
@@ -231,7 +231,7 @@
    "college": "Bellview Inst.",
    "aug_per_day": 6.1,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 15,
@@ -253,7 +253,7 @@
    "college": "Skills Academy",
    "aug_per_day": 8.35,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 5,
    "week": 0,
    "month": 0,
    "best_day": 13,
@@ -297,7 +297,7 @@
    "college": "Skills Academy",
    "aug_per_day": 2.8,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 3,
    "week": 0,
    "month": 0,
    "best_day": 6,
@@ -319,7 +319,7 @@
    "college": "Skills Academy",
    "aug_per_day": 4.95,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 6,
    "week": 0,
    "month": 0,
    "best_day": 9,
@@ -341,7 +341,7 @@
    "college": "Bellview Inst.",
    "aug_per_day": 3.45,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 5,
@@ -363,7 +363,7 @@
    "college": "Skills Academy",
    "aug_per_day": 8.15,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 4,
    "week": 0,
    "month": 0,
    "best_day": 15,
@@ -407,7 +407,7 @@
    "college": "Matric College",
    "aug_per_day": 6.2,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 4,
    "week": 0,
    "month": 0,
    "best_day": 10,
@@ -429,7 +429,7 @@
    "college": "Matric College",
    "aug_per_day": 5.3,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 5,
    "week": 0,
    "month": 0,
    "best_day": 10,
@@ -473,7 +473,7 @@
    "college": "Skills Academy",
    "aug_per_day": 2.4,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 4,
@@ -517,7 +517,7 @@
    "college": "Skills Academy",
    "aug_per_day": 6.05,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 5,
    "week": 0,
    "month": 0,
    "best_day": 12,
@@ -539,7 +539,7 @@
    "college": "Skills Academy",
    "aug_per_day": 5.05,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 6,
    "week": 0,
    "month": 0,
    "best_day": 13,
@@ -561,7 +561,7 @@
    "college": "Skills Academy",
    "aug_per_day": 6.5,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 7,
    "week": 0,
    "month": 0,
    "best_day": 11,
@@ -583,7 +583,7 @@
    "college": "Matric College",
    "aug_per_day": 8.15,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 13,
@@ -605,7 +605,7 @@
    "college": "Bellview Inst.",
    "aug_per_day": 3.65,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 4,
    "week": 0,
    "month": 0,
    "best_day": 8,
@@ -627,7 +627,7 @@
    "college": "Matric College",
    "aug_per_day": 2.95,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 7,
    "week": 0,
    "month": 0,
    "best_day": 7,
@@ -649,7 +649,7 @@
    "college": "Skills Academy",
    "aug_per_day": 8.2,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 5,
    "week": 0,
    "month": 0,
    "best_day": 16,
@@ -715,7 +715,7 @@
    "college": "Skills Academy",
    "aug_per_day": 3.45,
    "today": 0,
-   "yesterday": 0,
+   "yesterday": 2,
    "week": 0,
    "month": 0,
    "best_day": 10,
@@ -758,19 +758,19 @@
  "colleges": {
   "Bellview Inst.": {
    "now": 0,
-   "expected": 797.0,
+   "expected": 39.85,
    "aug_per_day": 39.85,
    "pct": 0.0
   },
   "Skills Academy": {
    "now": 0,
-   "expected": 1513.0,
+   "expected": 75.64999999999999,
    "aug_per_day": 75.64999999999999,
    "pct": 0.0
   },
   "Matric College": {
    "now": 0,
-   "expected": 817.0,
+   "expected": 40.85000000000001,
    "aug_per_day": 40.85000000000001,
    "pct": 0.0
   }
@@ -779,44 +779,25 @@
   "today": {
    "recorded_days": 1,
    "days": [
-    "2026-11-30"
+    "2026-11-02"
    ]
   },
   "yesterday": {
    "recorded_days": 1,
    "days": [
-    "2026-11-27"
+    "2026-10-30"
    ]
   },
   "week": {
    "recorded_days": 1,
    "days": [
-    "2026-11-30"
+    "2026-11-02"
    ]
   },
   "month": {
-   "recorded_days": 20,
+   "recorded_days": 1,
    "days": [
-    "2026-11-02",
-    "2026-11-03",
-    "2026-11-05",
-    "2026-11-06",
-    "2026-11-09",
-    "2026-11-10",
-    "2026-11-11",
-    "2026-11-12",
-    "2026-11-13",
-    "2026-11-16",
-    "2026-11-17",
-    "2026-11-18",
-    "2026-11-19",
-    "2026-11-20",
-    "2026-11-23",
-    "2026-11-24",
-    "2026-11-25",
-    "2026-11-26",
-    "2026-11-27",
-    "2026-11-30"
+    "2026-11-02"
    ]
   }
  }
