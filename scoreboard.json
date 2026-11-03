@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-03T14:55:09",
+ "generated_at": "2026-11-03T15:48:11",
  "latest_day": "2026-11-03",
  "month": "2026-11",
  "config_stale": false,
@@ -17,7 +17,7 @@
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 4,
+    "debit_orders": 5,
     "enrolment_incentive": 0,
     "cash_collected": 7285.0,
     "cash_incentive": 250,
@@ -25,7 +25,7 @@
     "total": 250,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 21
+    "to_next_level": 20
    }
   },
   {
