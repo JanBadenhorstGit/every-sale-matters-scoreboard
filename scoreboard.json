@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-03T10:26:49",
+ "generated_at": "2026-11-03T11:25:58",
  "latest_day": "2026-11-03",
  "month": "2026-11",
  "config_stale": false,
@@ -98,14 +98,14 @@
    "name": "Natasha",
    "college": "Matric College",
    "aug_per_day": 4.15,
-   "today": 1,
+   "today": 2,
    "yesterday": 6,
-   "week": 7,
-   "month": 7,
+   "week": 8,
+   "month": 8,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 1,
+    "debit_orders": 2,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -113,7 +113,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 24
+    "to_next_level": 23
    }
   },
   {
@@ -318,14 +318,14 @@
    "name": "Pheletso",
    "college": "Skills Academy",
    "aug_per_day": 4.95,
-   "today": 0,
+   "today": 1,
    "yesterday": 0,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 9,
    "prev_best": 9,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -333,7 +333,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   },
   {
@@ -362,14 +362,14 @@
    "name": "Clarence",
    "college": "Skills Academy",
    "aug_per_day": 8.15,
-   "today": 2,
+   "today": 3,
    "yesterday": 2,
-   "week": 4,
-   "month": 4,
+   "week": 5,
+   "month": 5,
    "best_day": 15,
    "prev_best": 15,
    "incentive": {
-    "debit_orders": 1,
+    "debit_orders": 2,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -377,7 +377,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 24
+    "to_next_level": 23
    }
   },
   {
@@ -428,14 +428,14 @@
    "name": "Palesa",
    "college": "Matric College",
    "aug_per_day": 5.3,
-   "today": 2,
+   "today": 3,
    "yesterday": 5,
-   "week": 7,
-   "month": 7,
+   "week": 8,
+   "month": 8,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 2,
+    "debit_orders": 3,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -443,7 +443,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 23
+    "to_next_level": 22
    }
   },
   {
@@ -516,14 +516,14 @@
    "name": "Grace",
    "college": "Skills Academy",
    "aug_per_day": 6.05,
-   "today": 1,
+   "today": 3,
    "yesterday": 9,
-   "week": 10,
-   "month": 10,
+   "week": 12,
+   "month": 12,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 1,
+    "debit_orders": 3,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -531,7 +531,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 24
+    "to_next_level": 22
    }
   },
   {
@@ -736,14 +736,14 @@
    "name": "Priscilla",
    "college": "Bellview Inst.",
    "aug_per_day": 3.55,
-   "today": 0,
+   "today": 1,
    "yesterday": 0,
-   "week": 0,
-   "month": 0,
+   "week": 1,
+   "month": 1,
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -751,28 +751,28 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   }
  ],
  "colleges": {
   "Bellview Inst.": {
-   "now": 29,
+   "now": 30,
    "expected": 79.7,
    "aug_per_day": 39.85,
-   "pct": 36.38644918444165
+   "pct": 37.641154328732746
   },
   "Skills Academy": {
-   "now": 68,
+   "now": 72,
    "expected": 151.29999999999998,
    "aug_per_day": 75.64999999999999,
-   "pct": 44.943820224719104
+   "pct": 47.58757435558494
   },
   "Matric College": {
-   "now": 32,
+   "now": 34,
    "expected": 81.70000000000002,
    "aug_per_day": 40.85000000000001,
-   "pct": 39.167686658506724
+   "pct": 41.61566707466339
   }
  },
  "periods": {
