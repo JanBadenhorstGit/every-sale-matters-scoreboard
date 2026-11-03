@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-03T13:41:11",
+ "generated_at": "2026-11-03T14:55:09",
  "latest_day": "2026-11-03",
  "month": "2026-11",
  "config_stale": false,
@@ -10,10 +10,10 @@
    "name": "Duduzile",
    "college": "Bellview Inst.",
    "aug_per_day": 2.45,
-   "today": 1,
+   "today": 2,
    "yesterday": 3,
-   "week": 4,
-   "month": 4,
+   "week": 5,
+   "month": 5,
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
@@ -98,14 +98,14 @@
    "name": "Natasha",
    "college": "Matric College",
    "aug_per_day": 4.15,
-   "today": 4,
+   "today": 5,
    "yesterday": 6,
-   "week": 10,
-   "month": 10,
+   "week": 11,
+   "month": 11,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 10,
+    "debit_orders": 11,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -113,7 +113,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 15
+    "to_next_level": 14
    }
   },
   {
@@ -186,14 +186,14 @@
    "name": "Liza",
    "college": "Skills Academy",
    "aug_per_day": 6.5,
-   "today": 2,
+   "today": 3,
    "yesterday": 10,
-   "week": 12,
-   "month": 12,
+   "week": 13,
+   "month": 13,
    "best_day": 14,
    "prev_best": 14,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 12,
     "enrolment_incentive": 0,
     "cash_collected": 8496.0,
     "cash_incentive": 250,
@@ -201,7 +201,7 @@
     "total": 250,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 13
    }
   },
   {
@@ -252,14 +252,14 @@
    "name": "Kenneth",
    "college": "Skills Academy",
    "aug_per_day": 8.35,
-   "today": 6,
+   "today": 7,
    "yesterday": 8,
-   "week": 14,
-   "month": 14,
+   "week": 15,
+   "month": 15,
    "best_day": 13,
    "prev_best": 13,
    "incentive": {
-    "debit_orders": 13,
+    "debit_orders": 14,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -267,7 +267,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 12
+    "to_next_level": 11
    }
   },
   {
@@ -318,10 +318,10 @@
    "name": "Pheletso",
    "college": "Skills Academy",
    "aug_per_day": 4.95,
-   "today": 2,
+   "today": 3,
    "yesterday": 0,
-   "week": 2,
-   "month": 2,
+   "week": 3,
+   "month": 3,
    "best_day": 9,
    "prev_best": 9,
    "incentive": {
@@ -406,14 +406,14 @@
    "name": "Clauday",
    "college": "Matric College",
    "aug_per_day": 6.2,
-   "today": 3,
+   "today": 5,
    "yesterday": 5,
-   "week": 8,
-   "month": 8,
+   "week": 10,
+   "month": 10,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 6,
+    "debit_orders": 8,
     "enrolment_incentive": 0,
     "cash_collected": 7461.0,
     "cash_incentive": 200,
@@ -421,7 +421,7 @@
     "total": 200,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 19
+    "to_next_level": 17
    }
   },
   {
@@ -435,7 +435,7 @@
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 9,
+    "debit_orders": 10,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -443,7 +443,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 16
+    "to_next_level": 15
    }
   },
   {
@@ -516,14 +516,14 @@
    "name": "Grace",
    "college": "Skills Academy",
    "aug_per_day": 6.05,
-   "today": 5,
+   "today": 6,
    "yesterday": 9,
-   "week": 14,
-   "month": 14,
+   "week": 15,
+   "month": 15,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 14,
+    "debit_orders": 15,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -531,7 +531,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 11
+    "to_next_level": 10
    }
   },
   {
@@ -757,22 +757,22 @@
  ],
  "colleges": {
   "Bellview Inst.": {
-   "now": 32,
+   "now": 33,
    "expected": 79.7,
    "aug_per_day": 39.85,
-   "pct": 40.150564617314934
+   "pct": 41.40526976160602
   },
   "Skills Academy": {
-   "now": 86,
+   "now": 90,
    "expected": 151.29999999999998,
    "aug_per_day": 75.64999999999999,
-   "pct": 56.84071381361534
+   "pct": 59.48446794448117
   },
   "Matric College": {
-   "now": 42,
+   "now": 45,
    "expected": 81.70000000000002,
    "aug_per_day": 40.85000000000001,
-   "pct": 51.40758873929008
+   "pct": 55.07955936352508
   }
  },
  "periods": {
