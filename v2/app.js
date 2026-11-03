@@ -395,6 +395,19 @@
       // A bank tab whose figures equal the previous month's is a copied template, not data.
       for (const t of ((C.raw.sources.bank || {}).copied_tabs || [])) add('Data', 'bad', `${t.college} bank tab for ${monthLabel(t.month)} repeats the ${monthLabel(t.same_as)} figures (copied template?); ignored`, 'collections');
       const gm = C.goalMonths[C.goalMonths.length - 1];
+      // Reconcile: the goal tab's cumulative actual must equal the bank tabs' collections over the same days.
+      if (gm) {
+        const sheetRows = C.raw.goals[gm].filter(r => r.actual_cum != null && !r.derived && !r.partial); const lastRow = sheetRows[sheetRows.length - 1];
+        if (lastRow) {
+          const upTo = cycleDayDate(gm, lastRow.dom); const bank = C.cycleBank(gm);
+          const bankDays = Object.values(bank).flatMap(o => o.days).filter(d => d.date <= upTo);
+          const bankSum = bankDays.reduce((s, d) => s + (d.collections || 0), 0);
+          const filled = new Set(bankDays.filter(d => d.collections != null).map(d => d.date));
+          const want = []; for (let d = new Date(cycleDayDate(gm, 8) + 'T00:00:00'); ymd(d) <= upTo; d.setDate(d.getDate() + 1)) if (![0, 6].includes(d.getDay()) && !filled.has(ymd(d))) want.push(ymd(d));
+          const diff = lastRow.actual_cum - bankSum;
+          if (Math.abs(diff) > Math.max(10000, 0.02 * lastRow.actual_cum)) add('Data', 'warn', `Goal tab shows ${randK(lastRow.actual_cum)} banked to ${dShort(upTo)} but the bank tabs add up to ${randK(bankSum)}` + (want.length ? `; no bank rows for ${want.slice(0, 4).map(dShort).join(', ')}${want.length > 4 ? ` +${want.length - 4}` : ''}` : ''), 'collections');
+        }
+      }
       if (gm && gm < CYCLE) add('Data', 'bad', `No goal tab yet for the cycle ${cycleLabel(CYCLE)} (latest ${cycleLabel(gm)})`, 'collections');
       if (gm) { const g = C.raw.goals[gm]; if (g.derivedDays > 1) add('Data', 'warn', `Goal tab for ${cycleLabel(gm)} not filled past day ${g.sheetTo}; actuals derived from bank tabs`, 'collections'); }
     } else add('Data', 'bad', 'Collections data not available', 'leadership');

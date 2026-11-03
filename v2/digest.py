@@ -105,6 +105,24 @@ def main(sales, coll, leads=None):
     bank_latest = sorted(C['bank'])[-1]
     if bank_latest < cycle_key: alerts.append(f"AMBER Collections Daily Goal sheet has no bank tabs for the cycle {cycle_label} yet")
     if gm < cycle_key: alerts.append(f"AMBER No goal tab yet for the cycle {cycle_label}")
+    # reconcile goal-tab cumulative actual with the bank tabs over the same days
+    sheet_rows = [r for r in g if r.get('actual_cum') is not None and not r.get('derived')]
+    if sheet_rows:
+        lr = sheet_rows[-1]; up_to = day_date(gm, lr['dom'])
+        if up_to:
+            bank_sum = 0.0; filled = set()
+            for mk, lo, hi in ((gm, 8, 31), (gm_next, 1, 7)):
+                for rows in C['bank'].get(mk, {}).values():
+                    for x in rows:
+                        dd = day_date(gm, x['dom']) if lo <= x['dom'] <= hi else None
+                        if dd and dd <= up_to and x.get('collections') is not None: bank_sum += x['collections']; filled.add(dd)
+            missing = []; dd = day_date(gm, 8)
+            while dd and dd <= up_to:
+                if dd.weekday() < 5 and dd not in filled: missing.append(dd.strftime('%a %-d %b'))
+                dd += datetime.timedelta(days=1)
+            diff = lr['actual_cum'] - bank_sum
+            if abs(diff) > max(10000, 0.02 * lr['actual_cum']):
+                alerts.append(f"AMBER Goal tab shows R{lr['actual_cum']/1e3:.0f}k banked to {up_to.strftime('%-d %b')} but the bank tabs add up to R{bank_sum/1e3:.0f}k" + (f"; no bank rows for {', '.join(missing[:4])}" + (f" +{len(missing)-4}" if len(missing) > 4 else '') if missing else ''))
     for t in (C.get('sources', {}).get('bank', {}).get('copied_tabs') or []):
         alerts.append(f"RED  {t['college']} bank tab for {datetime.date(int(t['month'][:4]), int(t['month'][5:]), 1).strftime('%B')} repeats the {datetime.date(int(t['same_as'][:4]), int(t['same_as'][5:]), 1).strftime('%B')} figures (copied template?); ignored")
     unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
