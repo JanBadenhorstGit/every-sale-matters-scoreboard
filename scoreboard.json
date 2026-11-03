@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-03T12:21:28",
+ "generated_at": "2026-11-03T13:41:11",
  "latest_day": "2026-11-03",
  "month": "2026-11",
  "config_stale": false,
@@ -19,10 +19,10 @@
    "incentive": {
     "debit_orders": 4,
     "enrolment_incentive": 0,
-    "cash_collected": 0.0,
-    "cash_incentive": 0,
+    "cash_collected": 7285.0,
+    "cash_incentive": 250,
     "paid": false,
-    "total": 0,
+    "total": 250,
     "next_level_at": 25,
     "next_level_amount": 400,
     "to_next_level": 21
@@ -98,14 +98,14 @@
    "name": "Natasha",
    "college": "Matric College",
    "aug_per_day": 4.15,
-   "today": 2,
+   "today": 4,
    "yesterday": 6,
-   "week": 8,
-   "month": 8,
+   "week": 10,
+   "month": 10,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 8,
+    "debit_orders": 10,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -113,7 +113,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 17
+    "to_next_level": 15
    }
   },
   {
@@ -142,10 +142,10 @@
    "name": "Prince",
    "college": "Skills Academy",
    "aug_per_day": 3.9,
-   "today": 2,
+   "today": 3,
    "yesterday": 2,
-   "week": 4,
-   "month": 4,
+   "week": 5,
+   "month": 5,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
@@ -252,14 +252,14 @@
    "name": "Kenneth",
    "college": "Skills Academy",
    "aug_per_day": 8.35,
-   "today": 4,
+   "today": 6,
    "yesterday": 8,
-   "week": 12,
-   "month": 12,
+   "week": 14,
+   "month": 14,
    "best_day": 13,
    "prev_best": 13,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 13,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -267,7 +267,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 12
    }
   },
   {
@@ -296,36 +296,36 @@
    "name": "Debbie",
    "college": "Skills Academy",
    "aug_per_day": 2.8,
-   "today": 1,
+   "today": 2,
    "yesterday": 3,
-   "week": 4,
-   "month": 4,
+   "week": 5,
+   "month": 5,
    "best_day": 6,
    "prev_best": 6,
    "incentive": {
-    "debit_orders": 2,
+    "debit_orders": 3,
     "enrolment_incentive": 0,
-    "cash_collected": 4630.0,
-    "cash_incentive": 100,
+    "cash_collected": 6630.0,
+    "cash_incentive": 150,
     "paid": false,
-    "total": 100,
+    "total": 150,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 23
+    "to_next_level": 22
    }
   },
   {
    "name": "Pheletso",
    "college": "Skills Academy",
    "aug_per_day": 4.95,
-   "today": 1,
+   "today": 2,
    "yesterday": 0,
-   "week": 1,
-   "month": 1,
+   "week": 2,
+   "month": 2,
    "best_day": 9,
    "prev_best": 9,
    "incentive": {
-    "debit_orders": 1,
+    "debit_orders": 2,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -333,7 +333,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 24
+    "to_next_level": 23
    }
   },
   {
@@ -369,7 +369,7 @@
    "best_day": 15,
    "prev_best": 15,
    "incentive": {
-    "debit_orders": 5,
+    "debit_orders": 4,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -377,7 +377,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 20
+    "to_next_level": 21
    }
   },
   {
@@ -406,28 +406,6 @@
    "name": "Clauday",
    "college": "Matric College",
    "aug_per_day": 6.2,
-   "today": 2,
-   "yesterday": 5,
-   "week": 7,
-   "month": 7,
-   "best_day": 10,
-   "prev_best": 10,
-   "incentive": {
-    "debit_orders": 5,
-    "enrolment_incentive": 0,
-    "cash_collected": 7461.0,
-    "cash_incentive": 200,
-    "paid": false,
-    "total": 200,
-    "next_level_at": 25,
-    "next_level_amount": 400,
-    "to_next_level": 20
-   }
-  },
-  {
-   "name": "Palesa",
-   "college": "Matric College",
-   "aug_per_day": 5.3,
    "today": 3,
    "yesterday": 5,
    "week": 8,
@@ -435,7 +413,29 @@
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 8,
+    "debit_orders": 6,
+    "enrolment_incentive": 0,
+    "cash_collected": 7461.0,
+    "cash_incentive": 200,
+    "paid": false,
+    "total": 200,
+    "next_level_at": 25,
+    "next_level_amount": 400,
+    "to_next_level": 19
+   }
+  },
+  {
+   "name": "Palesa",
+   "college": "Matric College",
+   "aug_per_day": 5.3,
+   "today": 5,
+   "yesterday": 5,
+   "week": 10,
+   "month": 10,
+   "best_day": 10,
+   "prev_best": 10,
+   "incentive": {
+    "debit_orders": 9,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -443,7 +443,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 17
+    "to_next_level": 16
    }
   },
   {
@@ -516,14 +516,14 @@
    "name": "Grace",
    "college": "Skills Academy",
    "aug_per_day": 6.05,
-   "today": 4,
+   "today": 5,
    "yesterday": 9,
-   "week": 13,
-   "month": 13,
+   "week": 14,
+   "month": 14,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 13,
+    "debit_orders": 14,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -531,7 +531,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 12
+    "to_next_level": 11
    }
   },
   {
@@ -582,14 +582,14 @@
    "name": "Lindiwe",
    "college": "Matric College",
    "aug_per_day": 8.15,
-   "today": 5,
+   "today": 6,
    "yesterday": 6,
-   "week": 11,
-   "month": 11,
+   "week": 12,
+   "month": 12,
    "best_day": 13,
    "prev_best": 13,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 12,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -597,7 +597,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 13
    }
   },
   {
@@ -626,14 +626,14 @@
    "name": "Hulda",
    "college": "Matric College",
    "aug_per_day": 2.95,
-   "today": 0,
+   "today": 1,
    "yesterday": 1,
-   "week": 1,
-   "month": 1,
+   "week": 2,
+   "month": 2,
    "best_day": 7,
    "prev_best": 7,
    "incentive": {
-    "debit_orders": 0,
+    "debit_orders": 1,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -641,21 +641,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 25
+    "to_next_level": 24
    }
   },
   {
    "name": "Ntase",
    "college": "Skills Academy",
    "aug_per_day": 8.2,
-   "today": 2,
+   "today": 3,
    "yesterday": 3,
-   "week": 5,
-   "month": 5,
+   "week": 6,
+   "month": 6,
    "best_day": 16,
    "prev_best": 16,
    "incentive": {
-    "debit_orders": 5,
+    "debit_orders": 6,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -663,7 +663,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 20
+    "to_next_level": 19
    }
   },
   {
@@ -723,10 +723,10 @@
    "incentive": {
     "debit_orders": 1,
     "enrolment_incentive": 0,
-    "cash_collected": 0.0,
-    "cash_incentive": 0,
+    "cash_collected": 4630.0,
+    "cash_incentive": 100,
     "paid": false,
-    "total": 0,
+    "total": 100,
     "next_level_at": 25,
     "next_level_amount": 400,
     "to_next_level": 24
@@ -763,16 +763,16 @@
    "pct": 40.150564617314934
   },
   "Skills Academy": {
-   "now": 79,
+   "now": 86,
    "expected": 151.29999999999998,
    "aug_per_day": 75.64999999999999,
-   "pct": 52.214144084600136
+   "pct": 56.84071381361534
   },
   "Matric College": {
-   "now": 35,
+   "now": 42,
    "expected": 81.70000000000002,
    "aug_per_day": 40.85000000000001,
-   "pct": 42.839657282741726
+   "pct": 51.40758873929008
   }
  },
  "periods": {
