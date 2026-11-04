@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-03T16:52:07",
+ "generated_at": "2026-11-04T07:05:06",
  "latest_day": "2026-11-03",
  "month": "2026-11",
  "config_stale": false,
@@ -362,10 +362,10 @@
    "name": "Clarence",
    "college": "Skills Academy",
    "aug_per_day": 8.15,
-   "today": 4,
+   "today": 3,
    "yesterday": 2,
-   "week": 6,
-   "month": 6,
+   "week": 5,
+   "month": 5,
    "best_day": 15,
    "prev_best": 15,
    "incentive": {
@@ -763,10 +763,10 @@
    "pct": 41.40526976160602
   },
   "Skills Academy": {
-   "now": 90,
+   "now": 89,
    "expected": 151.29999999999998,
    "aug_per_day": 75.64999999999999,
-   "pct": 59.48446794448117
+   "pct": 58.82352941176471
   },
   "Matric College": {
    "now": 45,
