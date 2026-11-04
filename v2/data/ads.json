@@ -1,5 +1,5 @@
 {
-"generated_at": "2026-11-02T05:48:22.079Z",
+"generated_at": "2026-11-04T09:55:00.000Z",
 "source": "PPC = Google Ads API campaign report (cost_micros/1e6, ZAR). Facebook = Meta Marketing API account-level amount_spent (ZAR). Matric College Facebook spend not available yet.",
 "accounts": {
 "PPC": {
@@ -507,16 +507,16 @@
 },
 "2026-11-01": {
 "PPC": {
-"cost": 3132,
-"clicks": 1640,
-"conv": 253
+"cost": 3121,
+"clicks": 1635,
+"conv": 271
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 498,
-"clicks": 238,
-"conv": 29
+"cost": 4366,
+"clicks": 1674,
+"conv": 366
 }
 },
 "2026-08-29": {
@@ -531,6 +531,13 @@
 "cost": 1964,
 "clicks": 469,
 "conv": 157
+}
+},
+"2026-11-03": {
+"PPC": {
+"cost": 4759,
+"clicks": 1738,
+"conv": 377
 }
 }
 },
@@ -1036,21 +1043,28 @@
 "PPC": {
 "cost": 2941,
 "clicks": 1129,
-"conv": 255
+"conv": 258
 }
 },
 "2026-11-01": {
 "PPC": {
-"cost": 5743,
-"clicks": 3499,
-"conv": 344
+"cost": 5708,
+"clicks": 3501,
+"conv": 367
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 1096,
-"clicks": 547,
-"conv": 32
+"cost": 8752,
+"clicks": 4476,
+"conv": 591
+}
+},
+"2026-11-03": {
+"PPC": {
+"cost": 8252,
+"clicks": 4238,
+"conv": 517
 }
 }
 },
@@ -1542,21 +1556,21 @@
 "PPC": {
 "cost": 432,
 "clicks": 129,
-"conv": 18
+"conv": 19
 }
 },
 "2026-11-01": {
 "PPC": {
-"cost": 478,
-"clicks": 149,
+"cost": 481,
+"clicks": 151,
 "conv": 17
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 93,
-"clicks": 29,
-"conv": 1
+"cost": 1619,
+"clicks": 480,
+"conv": 78
 }
 },
 "2026-08-01": {
@@ -1571,6 +1585,13 @@
 "cost": 412,
 "clicks": 144,
 "conv": 23
+}
+},
+"2026-11-03": {
+"PPC": {
+"cost": 1860,
+"clicks": 470,
+"conv": 75
 }
 }
 }
@@ -2209,7 +2230,7 @@
 "2026-11": {
 "Skills Academy": {
 "PPC": {
-"cost": 3630,
+"cost": 12246,
 "clicks": 1878,
 "conv": 282,
 "impressions": 84992,
@@ -2294,7 +2315,7 @@
 },
 "Matric College": {
 "PPC": {
-"cost": 6839,
+"cost": 22712,
 "clicks": 4046,
 "conv": 376,
 "impressions": 278163,
@@ -2346,7 +2367,7 @@
 },
 "Bellview Inst.": {
 "PPC": {
-"cost": 572,
+"cost": 3960,
 "clicks": 178,
 "conv": 18,
 "impressions": 6085,
