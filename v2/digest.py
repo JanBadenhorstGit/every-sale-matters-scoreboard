@@ -2,6 +2,9 @@
 Usage: python v2/digest.py [sales.json] [collections.json]  -> prints subject line then body."""
 import json, os, sys, datetime, collections, urllib.request
 
+# South African public holidays (no bank processing): treated like weekends
+SA_HOLIDAYS = {'2026-11-04', '2026-12-16', '2026-12-25', '2026-12-26', '2027-01-01', '2027-03-22', '2027-03-26', '2027-03-29', '2027-04-27', '2027-05-01', '2027-06-16', '2027-08-09', '2027-09-24', '2027-12-16', '2027-12-25', '2027-12-27'}
+
 def load(path_or_url):
     if path_or_url.startswith('http'):
         return json.load(urllib.request.urlopen(path_or_url + ('&' if '?' in path_or_url else '?') + 'v=' + str(int(datetime.datetime.now().timestamp()))))
@@ -76,7 +79,7 @@ def main(sales, coll, leads=None):
     def bd_date(mk, dom):
         try: return datetime.date(int(mk[:4]), int(mk[5:]), dom)
         except ValueError: return None
-    complete = sorted(d for d in (bd_date(mk, dom) for mk, dom in bank_days) if d and d < sast_today and d.weekday() < 5)
+    complete = sorted(d for d in (bd_date(mk, dom) for mk, dom in bank_days) if d and d < sast_today and d.weekday() < 5 and d.isoformat() not in SA_HOLIDAYS)
     last_day = complete[-1] if complete else None
     def coll_on(d): return sum((x.get('collections') or 0) for rows in C['bank'].get(d.strftime('%Y-%m'), {}).values() for x in rows if x['dom'] == d.day)
     goal_row = lambda d: next((r for r in g if r['dom'] == d.day and day_date(gm, r['dom']) == d), None)
@@ -118,7 +121,7 @@ def main(sales, coll, leads=None):
                         if dd and dd <= up_to and x.get('collections') is not None: bank_sum += x['collections']; filled.add(dd)
             missing = []; dd = day_date(gm, 8)
             while dd and dd <= up_to:
-                if dd.weekday() < 5 and dd not in filled: missing.append(dd.strftime('%a %-d %b'))
+                if dd.weekday() < 5 and dd.isoformat() not in SA_HOLIDAYS and dd not in filled: missing.append(dd.strftime('%a %-d %b'))
                 dd += datetime.timedelta(days=1)
             diff = lr['actual_cum'] - bank_sum
             if abs(diff) > max(10000, 0.02 * lr['actual_cum']):
