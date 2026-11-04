@@ -423,7 +423,9 @@
     if (unr.length) add('Sales', 'warn', `${unr.length} registrar${unr.length === 1 ? '' : 's'} selling but not on the comparison-sheet roster: ${unr.map(p => p.name).join(', ')}`, 'sales');
     const cm = (D.raw.course_months || {})[D.month] || {};
     for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7) add('Sales', 'warn', `${fam}: only ${pct(v.do, v.n)} of ${v.n} sales have a debit order`, 'sales');
-    // Marketing: display-placement leads that never register
+    // Leads: the same contact re-entering a college's GF-list automation within an hour writes a duplicate sales-sheet row (seen 2 Nov 2026: Matric wait cut to 5 min, 10-min backup retag re-fired)
+    { const dm = (S.leads || {}).demand || {}; const re = dm.reentries || {}; const dd = dm.daily || {};
+      for (const day of Object.keys(re).sort().slice(-3)) for (const [col, n] of Object.entries(re[day])) { const tot = ((dd[day] || {})[col] || {}).enquiries || 0; if (tot >= 50 && n / tot > 0.1) add('Leads', 'bad', `${col} GF list: ${n0(n)} of ${n0(tot)} entries on ${dDow(day)} ${dShort(day)} were the same contact entering again within an hour — duplicate rows on the sales sheet; check the GF-list automation waits against the backup retag`, 'leadership'); } }
     for (const f of (((S.leads || {}).sources || {}).flags || [])) add('Marketing', 'warn', `${f.college.split(' ')[0]} ${f.path.split('/').pop()}: ${n0(f.third_party_leads)} leads from third-party placements, ${f.third_party_registered} registered (${n1(f.third_party_conv)}% vs ${n1(f.rest_conv)}% for the page's other traffic)`, 'leadership');
     // Collections
     if (C && C.cur) {

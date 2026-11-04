@@ -197,3 +197,7 @@ cannot be judged yet: most Bellview PPC enquiries carry no Source Page.
   share of each registrar's sales in the judged months where money was taken at the sale, from the sales sheets
   (`sales.json days[date][registrar].paid_n / reg`), coloured against the team rate.
 - Marketing alerts carry role `marketing`, so they appear for Marketing and Leadership, not Collections.
+- **Duplicate sheet rows** (`leads.json demand.reentries`, Attention "Leads" + digest `DUPLICATE ROWS`): the same
+  contact entering a college's GF-list automation again within an hour writes another row on that sales sheet. Found
+  2 Nov 2026 when the Matric GF-list waits were cut to 5 minutes and the 10-minute "Backup Matric GF" retag started
+  re-firing the list for 90% of Matric leads.

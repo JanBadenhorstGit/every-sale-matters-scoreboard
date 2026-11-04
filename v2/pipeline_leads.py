@@ -81,6 +81,8 @@ def fetch_ids(ids):
 DEMAND_AUTOMATIONS = {"4": "Skills Academy", "111": "Matric College", "7615": "Bellview Inst."}
 AUTO_RAW = RAW / "auto"
 DEDUPE_MIN = 10  # two entries for one contact within this many minutes = one submission (double-fire)
+REENTRY_MIN = 60  # a second GF-list entry for the same contact within an hour = a duplicate sheet row (backup/retag loops), not a new enquiry
+REENTRY = collections.Counter()  # (day, college) -> re-entries, filled by fetch of submissions
 
 
 def fetch_entries(sid: str, day: date):
@@ -115,13 +117,16 @@ def load_demand_entries(days, refetch_days=2):
                 t = ts(r["t"])
                 if t:
                     events.append((college, r["c"], t))
-    # de-duplicate double-fires
+    # de-duplicate double-fires; count re-entries (same contact again within REENTRY_MIN) per college-day as a sheet-duplicate signal
     events.sort(key=lambda e: (e[0], e[1], e[2]))
     out, last = [], {}
+    REENTRY.clear()
     for college, cid, t in events:
         k = (college, cid)
         if k in last and (t - last[k]).total_seconds() < DEDUPE_MIN * 60:
             continue
+        if k in last and (t - last[k]).total_seconds() < REENTRY_MIN * 60:
+            REENTRY[(t.date().isoformat(), college)] += 1
         last[k] = t
         out.append((college, cid, t))
     return out
@@ -491,12 +496,13 @@ def main():
                 weekly[wkey]["enquiries"] += v["enquiries"]; weekly[wkey]["repeat"] += v["repeat"]
         demand = {
             "daily": d_daily, "monthly": d_monthly,
+            "reentries": {dk: {c: n for (d2, c), n in REENTRY.items() if d2 == dk} for dk in sorted({d2 for d2, _ in REENTRY})},
             "weekly_repeat_share": {w: {**v, "repeat_pct": round(100 * v["repeat"] / v["enquiries"], 1) if v["enquiries"] else None} for w, v in sorted(weekly.items())},
             "repeat_gap": dict(gap_hist),
             "sales": {"total": sales_total, "from_repeat_enquirers": sales_repeat, "pct": round(100 * sales_repeat / sales_total, 1) if sales_total else None},
             "classified": dict(classified),
             "automations": {sid: col for sid, col in DEMAND_AUTOMATIONS.items()},
-            "note": "enquiries = entries into each college's GF-list automation (one per form submission, de-duplicated within 10 minutes); "
+            "note": "enquiries = entries into each college's GF-list automation (one per form submission, de-duplicated within 10 minutes); reentries = the same contact entering again within an hour, which writes a duplicate sheet row; "
                     "new = the contact was created within 6 hours of the submission; repeat = an existing contact enquired again. "
                     "Channel for repeats is the contact's current source field, i.e. usually the latest submission. "
                     "Lead counts elsewhere on this board count new contacts only.",

@@ -207,6 +207,12 @@ def main(sales, coll, leads=None):
         if chs: L.append('- Best converting channels: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[:3]) + ' · weakest: ' + ', '.join(f"{n} {p:.1f}%" for n, l, p in chs[-2:]))
         for f in LD.get('sources', {}).get('flags', []):
             L.append(f"- PLACEMENT LEAK {f['college'].split()[0]} {f['path'].split('/')[-1]}: {f['third_party_leads']:,} leads via third-party sites, {f['third_party_registered']} registered ({f['third_party_conv']}% vs {f['rest_conv']}% for the page's other traffic). Add placement exclusions in Google Ads.")
+        RE = (LD.get('demand') or {}).get('reentries', {}); DDm = (LD.get('demand') or {}).get('daily', {})
+        for day in sorted(RE)[-3:]:
+            for col, n in RE[day].items():
+                tot = (DDm.get(day, {}).get(col) or {}).get('enquiries', 0)
+                if tot >= 50 and n / tot > 0.1:
+                    L.append(f"- DUPLICATE ROWS {col.split()[0]} GF list: {n:,} of {tot:,} entries on {datetime.date.fromisoformat(day).strftime('%a %-d %b')} were the same contact entering again within an hour. Each writes another row on the sales sheet; check the GF-list automation waits against the 10-minute backup retag.")
         DM = (LD.get('demand') or {}).get('monthly', {}).get(month)
         if DM:
             e = n = r = 0; per_col = []
