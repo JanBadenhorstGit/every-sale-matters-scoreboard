@@ -181,3 +181,19 @@ cannot be judged yet: most Bellview PPC enquiries carry no Source Page.
 - `pipeline_collections.py` accepts both tab-name orders ("Matric Bank October", "Skills Academy October Bank",
   including the "Bellivew" spelling). A bank tab whose figures equal the previous month's is a copied template:
   it is dropped and flagged in Attention and the digest (`sources.bank.copied_tabs`).
+
+### v2.10 — spend and volume signals, money at sale (4 Nov 2026)
+
+- **Google Ads · this week vs last** (Marketing view): per college, spend, new PPC enquiries, rand per enquiry,
+  registrations and rand per registration for the last 7 complete days against the 7 before. Red when a unit cost
+  rises more than 25%, green when it falls more than 20%.
+- **Spend and volume signals** (Marketing view, also in Attention for Leadership and in the digest as `MARKETING`
+  lines): spend change above 25% week on week; a zero-spend day (under 5% of the same weekday's mean over the
+  previous four weeks, so scheduled quiet Saturdays do not alarm; days Google reports nothing for count as zero,
+  which is what the 27–29 Oct 2026 billing suspension looked like); Facebook month-to-date pace vs the previous
+  month (monthly totals only); and unusual enquiry days (below 60% or above 160% of the same weekday over the
+  previous four weeks) classified as "spend moved with it: marketing" or "spend did not move: check routing and forms".
+- **Money at sale** column in "Registrars · whose sales pay" (now shown on the Collections Manager view too): the
+  share of each registrar's sales in the judged months where money was taken at the sale, from the sales sheets
+  (`sales.json days[date][registrar].paid_n / reg`), coloured against the team rate.
+- Marketing alerts carry role `marketing`, so they appear for Marketing and Leadership, not Collections.

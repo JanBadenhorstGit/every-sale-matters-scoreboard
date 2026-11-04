@@ -441,6 +441,12 @@
       const sold = {}; for (const m of [D.prevMonth, D.month]) for (const v of Object.values((D.raw.course_months || {})[m] || {})) sold[v.dept] = (sold[v.dept] || 0) + v.n;
       for (const [d, n] of Object.entries(byDept)) if (sold[d] && n >= 5 && 100 * n / sold[d] > 8) add('Collections', 'warn', `${d}: ${n} cancellation requests this cycle = ${n1(100 * n / sold[d])} per 100 sales of the last two months`, 'collections');
     }
+    if (S.ads && S.leads) {
+      const sg = marketingSignals(D, S.leads, S.ads);
+      for (const s of sg.spend) { if (s.zeroDay) add('Marketing', 'bad', `${s.college}: no Google Ads spend on ${dDow(s.zeroDay)} ${dShort(s.zeroDay)} (normally ${randK(s.mean)} a day)`, 'marketing'); else if (s.flag) add('Marketing', Math.abs(s.chg) > 50 ? 'bad' : 'warn', `${s.college} Google Ads spend ${s.chg > 0 ? 'up' : 'down'} ${Math.round(Math.abs(s.chg))}% week on week (${randK(s.cur)} vs ${randK(s.prev)})`, 'marketing'); }
+      for (const f of sg.facebook) if (f.flag) add('Marketing', Math.abs(f.chg) > 50 ? 'bad' : 'warn', `${f.college} Facebook spend pace ${f.chg > 0 ? 'up' : 'down'} ${Math.round(Math.abs(f.chg))}% on last month (${randK(f.pace)} vs ${randK(f.ppace)} a day)`, 'marketing');
+      for (const x of sg.anomalies) add('Marketing', x.ratio < 0.6 ? 'bad' : 'warn', `${x.college}: ${n0(x.n)} enquiries on ${dDow(x.date)} ${dShort(x.date)} vs ${n0(Math.round(x.mean))} normal; ${x.cause}`, 'marketing');
+    }
     return A.sort((x, y) => (x.sev === 'bad' ? 0 : 1) - (y.sev === 'bad' ? 0 : 1));
   }
   function alertsCard(D, C, scope) {
@@ -769,16 +775,20 @@
       el('div', { class: 'table-wrap dense' }, sortableTable(mcols, monthRows, 'm')),
       el('p', { class: 'note' }, 'A sale counts as paid when FileMaker shows any learner payment for that registration. Pending = no payment has ever been received. 98–99% of sales are found in FileMaker. Payments are cumulative to the report date, so the newest month is not yet comparable; judge registrars and courses on the closed months. The weekly FileMaker report arrives on Mondays; this card refreshes then.'))];
     if (scope !== 'collections') parts.push(wcard);
-    if (judge.length && (scope === 'sales' || scope === 'leadership')) {
-      const rows = payRegistrarRows(P, judge).filter(r => r.matched >= 30).map(r => ({ ...r, name: nameOf(r.key), college: collegeOf(r.key) }));
+    if (judge.length) {
+      const mas = {}; // money at sale per registrar over the judged months, from the sales sheets
+      for (const [d, regs] of Object.entries(D.raw.days || {})) if (judge.includes(d.slice(0, 7))) for (const [k, v] of Object.entries(regs)) { const m = mas[k] ||= { reg: 0, paid: 0 }; m.reg += v.reg || 0; m.paid += v.paid_n || 0; }
+      const rows = payRegistrarRows(P, judge).filter(r => r.matched >= 30).map(r => ({ ...r, name: nameOf(r.key), college: collegeOf(r.key), masPct: mas[r.key] ? pctN(mas[r.key].paid, mas[r.key].reg) : null }));
+      const teamMas = Object.values(mas).reduce((s, m) => ({ reg: s.reg + m.reg, paid: s.paid + m.paid }), { reg: 0, paid: 0 }); const teamMasPct = pctN(teamMas.paid, teamMas.reg);
       const rcols = [{ key: 'name', label: 'Registrar', render: (v, r) => el('span', {}, el('span', { class: 'dot ' + collegeClass(r.college) }), ' ', v) }, { key: 'sold', label: 'Sold', num: true },
         { key: 'paidPct', label: 'Paid any', num: true, render: (v, r) => v == null ? '–' : el('span', { class: r.gap != null && r.gap < -12 ? 'bad' : r.gap < -5 ? 'warn' : r.gap > 10 ? 'good' : '' }, Math.round(v) + '%') },
         { key: 'teamPct', label: 'Team', num: true, fmt: v => v == null ? '–' : Math.round(v) + '%' },
         { key: 'missing', label: 'Short', num: true, render: v => v == null ? '–' : el('span', { class: v > 15 ? 'bad' : '' }, v > 0 ? n0(v) : '–') },
+        { key: 'masPct', label: 'Money at sale', num: true, render: v => v == null ? '–' : el('span', { class: teamMasPct != null && v < teamMasPct - 10 ? 'bad' : teamMasPct != null && v > teamMasPct + 10 ? 'good' : '' }, Math.round(v) + '%') },
         { key: 'cash', label: 'Cash', num: true, fmt: randK }];
       parts.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Registrars · whose sales pay'), el('span', { class: 'xs muted' }, judge.map(monthLabel).join(' + ') + ' sales · registrars with 30+ matched sales')),
         el('div', { class: 'table-wrap dense' }, sortableTable(rcols, rows, 'missing')),
-        el('p', { class: 'note' }, 'Team rate is computed on the same months, so age does not favour anyone. "Sales short of team rate" = how many more of this registrar’s sales would have paid at the team rate; a high number with a low paid share points to how the sale is closed (deposit promised, debit-order date, course fit), not to collections.')));
+        el('p', { class: 'note' }, 'Team rate is computed on the same months, so age does not favour anyone. "Sales short of team rate" = how many more of this registrar’s sales would have paid at the team rate; a high number with a low paid share points to how the sale is closed (deposit promised, debit-order date, course fit), not to collections. Money at sale = share of the registrar’s sales in the same months where any payment was taken on the day of the sale (team ' + (teamMasPct == null ? '–' : Math.round(teamMasPct) + '%') + '); sales with money at sale pay on at roughly three times the rate of debit-order-only sales.')));
     }
     if (judge.length && (scope === 'collections' || scope === 'leadership')) {
       const fam = {};
@@ -1211,6 +1221,93 @@
     return out;
   }
 
+
+  // ---------- v2.10: marketing signals — spend changes, cost per enquiry week on week, lead-volume anomalies ----------
+  function marketingSignals(D, L, A) {
+    const out = { spend: [], anomalies: [], wow: [], facebook: [], asOf: null, leadsTo: null };
+    if (!A || !A.daily) return out;
+    const genDay = ymd(new Date(A.generated_at || Date.now()));
+    const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
+    const asOf = addDays(genDay, -1); out.asOf = asOf; // the day before the refresh is the last complete spend day
+    const sumPPC = (col, from, to) => { let s = 0; for (const [d, v] of Object.entries(A.daily[col] || {})) if (d >= from && d <= to) s += (v.PPC || {}).cost || 0; return s; };
+    const ldaily = L && L.daily ? L.daily : {}; const leadsTo = L && L.window ? L.window.to : asOf; out.leadsTo = leadsTo;
+    const sumLeads = (col, ch, from, to, key = 'leads') => { let s = 0; for (const [d, v] of Object.entries(ldaily)) if (d >= from && d <= to) s += (((v[col] || {})[ch]) || {})[key] || 0; return s; };
+    for (const col of Object.keys(A.daily)) {
+      // 1. spend change: last 7 complete days vs the 7 before
+      const cur = sumPPC(col, addDays(asOf, -6), asOf), prev = sumPPC(col, addDays(asOf, -13), addDays(asOf, -7));
+      const chg = prev ? 100 * (cur - prev) / prev : null;
+      out.spend.push({ college: col, channel: 'PPC', cur, prev, chg, flag: prev > 1000 && chg != null && Math.abs(chg) > 25 });
+      // zero-spend day: one of the last 3 calendar days under 5% of the same weekday's mean over the previous 4 weeks.
+      // Days absent from the file count as zero (Google reports nothing for a day with no spend, e.g. the 27-29 Oct 2026 suspension);
+      // comparing with the same weekday keeps scheduled quiet days (Saturdays) from alarming.
+      const costOn = d => (((A.daily[col] || {})[d] || {}).PPC || {}).cost || 0;
+      for (let i = 2; i >= 0; i--) {
+        const d = addDays(asOf, -i); const mean = [7, 14, 21, 28].reduce((s, k) => s + costOn(addDays(d, -k)), 0) / 4; const c = costOn(d);
+        if (mean > 500 && c < 0.05 * mean) out.spend.push({ college: col, channel: 'PPC', zeroDay: d, mean });
+      }
+      // 2. week on week: spend, new enquiries and registrations on the PPC channel (CRM) for the same two weeks
+      const to = leadsTo < asOf ? leadsTo : asOf;
+      const w = (from, until) => ({ spend: sumPPC(col, from, until), leads: sumLeads(col, 'PPC', from, until), reg: sumLeads(col, 'PPC', from, until, 'registered') });
+      const tw = w(addDays(to, -6), to), lw = w(addDays(to, -13), addDays(to, -7));
+      out.wow.push({ college: col, to, tw, lw, cpe: tw.leads ? tw.spend / tw.leads : null, cpeL: lw.leads ? lw.spend / lw.leads : null, cpr: tw.reg ? tw.spend / tw.reg : null, cprL: lw.reg ? lw.spend / lw.reg : null });
+    }
+    // Facebook: month-to-date daily pace vs the previous month's daily average (monthly totals only)
+    const months = Object.keys(A.monthly || {}).sort(); const m = months[months.length - 1], pm = months[months.length - 2];
+    if (m && pm) {
+      const dim = mm => new Date(+mm.slice(0, 4), +mm.slice(5, 7), 0).getDate();
+      const elapsed = Math.min(dim(m), Math.max(1, +asOf.slice(8, 10)));
+      for (const col of Object.keys(A.monthly[m] || {})) {
+        const c = ((A.monthly[m][col] || {}).Facebook || {}).cost, p = ((A.monthly[pm][col] || {}).Facebook || {}).cost;
+        if (c == null || p == null || elapsed < 5) continue;
+        const pace = c / elapsed, ppace = p / dim(pm); const chg = ppace ? 100 * (pace - ppace) / ppace : null;
+        out.facebook.push({ college: col, pace, ppace, chg, flag: ppace > 300 && chg != null && Math.abs(chg) > 25 });
+      }
+    }
+    // 3. lead-volume anomalies: each of the last 3 complete days vs the mean of the same weekday over the previous 4 weeks
+    const dd = L && L.demand ? L.demand.daily : null;
+    if (dd) {
+      const ds = Object.keys(dd).sort().filter(d => d <= leadsTo);
+      for (const d of ds.slice(-3)) {
+        for (const col of Object.keys(dd[d])) {
+          const n = dd[d][col].enquiries; const hist = [1, 2, 3, 4].map(k => addDays(d, -7 * k)).filter(h => dd[h] && dd[h][col]).map(h => dd[h][col].enquiries);
+          if (hist.length < 3) continue; const mean = hist.reduce((s, v) => s + v, 0) / hist.length;
+          if (mean < 30) continue; const ratio = n / mean;
+          if (ratio < 0.6 || ratio > 1.6) {
+            const sp = sumPPC(col, d, d), spHist = [1, 2, 3, 4].map(k => sumPPC(col, addDays(d, -7 * k), addDays(d, -7 * k))); const spMean = spHist.reduce((s, v) => s + v, 0) / (spHist.length || 1);
+            const spRatio = spMean ? sp / spMean : null;
+            const cause = d > asOf ? 'spend not yet reported for this day' : spRatio == null ? 'no Google Ads spend on this weekday either way' : (ratio < 1 && spRatio < 0.75) || (ratio > 1 && spRatio > 1.4) ? 'spend moved with it: marketing' : 'spend did not move: check routing and forms';
+            out.anomalies.push({ date: d, college: col, n, mean, ratio, spRatio, cause });
+          }
+        }
+      }
+    }
+    return out;
+  }
+  function signalsCards(D, L, A) {
+    const sg = marketingSignals(D, L, A); const cards = [];
+    if (!sg.asOf) return cards;
+    const arrow = v => v == null ? '–' : (v > 0 ? '+' : '') + Math.round(v) + '%';
+    const wcols = [{ key: 'college', label: 'College', render: v => el('span', {}, el('span', { class: 'dot ' + collegeClass(v) }), ' ', v) },
+      { key: 'spend', label: 'Spend', num: true, render: (v, r) => el('span', {}, randK(r.tw.spend), ' ', el('span', { class: 'xs muted' }, arrow(pctN(r.tw.spend - r.lw.spend, r.lw.spend)))) },
+      { key: 'leads', label: 'New enquiries', num: true, render: (v, r) => el('span', {}, n0(r.tw.leads), ' ', el('span', { class: 'xs muted' }, arrow(pctN(r.tw.leads - r.lw.leads, r.lw.leads)))) },
+      { key: 'cpe', label: 'R / enquiry', num: true, render: (v, r) => el('span', { class: r.cpe != null && r.cpeL != null && r.cpe > 1.25 * r.cpeL ? 'bad' : r.cpe != null && r.cpeL != null && r.cpe < 0.8 * r.cpeL ? 'good' : '' }, rand(r.cpe), ' ', el('span', { class: 'xs muted' }, 'was ' + rand(r.cpeL))) },
+      { key: 'reg', label: 'Registered', num: true, render: (v, r) => el('span', {}, n0(r.tw.reg), ' ', el('span', { class: 'xs muted' }, arrow(pctN(r.tw.reg - r.lw.reg, r.lw.reg)))) },
+      { key: 'cpr', label: 'R / registration', num: true, render: (v, r) => el('span', { class: r.cpr != null && r.cprL != null && r.cpr > 1.25 * r.cprL ? 'bad' : r.cpr != null && r.cprL != null && r.cpr < 0.8 * r.cprL ? 'good' : '' }, rand(r.cpr), ' ', el('span', { class: 'xs muted' }, 'was ' + rand(r.cprL))) }];
+    const wrows = sg.wow.map(r => ({ ...r, spend: r.tw.spend, leads: r.tw.leads, reg: r.tw.reg }));
+    const to = sg.wow.length ? sg.wow[0].to : sg.asOf;
+    cards.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Google Ads · this week vs last'), el('span', { class: 'xs muted' }, `7 days to ${dShort(to)} vs the 7 before`)),
+      el('div', { class: 'table-wrap dense' }, sortableTable(wcols, wrows, 'spend')),
+      el('p', { class: 'note' }, 'Spend from the Google Ads API per college account; enquiries and registrations are CRM new contacts on the PPC channel in the same days. Red when the cost per enquiry or per registration is up more than 25% on the previous week; green when down more than 20%. Facebook spend is only available monthly and is judged on its month-to-date pace in the Attention list.')));
+    const items = [];
+    for (const s of sg.spend) if (s.zeroDay) items.push(['bad', `${s.college}: no Google Ads spend on ${dDow(s.zeroDay)} ${dShort(s.zeroDay)} (normally ${randK(s.mean)} a day): paused campaign, budget cap or billing failure`]);
+    for (const s of sg.spend) if (s.flag) items.push([Math.abs(s.chg) > 50 ? 'bad' : 'warn', `${s.college} Google Ads spend ${randK(s.cur)} in the 7 days to ${dShort(sg.asOf)}, ${s.chg > 0 ? 'up' : 'down'} ${Math.round(Math.abs(s.chg))}% on the 7 before (${randK(s.prev)})`]);
+    for (const f of sg.facebook) if (f.flag) items.push([Math.abs(f.chg) > 50 ? 'bad' : 'warn', `${f.college} Facebook spend pace ${randK(f.pace)} a day this month vs ${randK(f.ppace)} last month (${arrow(f.chg)})`]);
+    for (const x of sg.anomalies) items.push([x.ratio < 0.6 ? 'bad' : 'warn', `${x.college}: ${n0(x.n)} enquiries on ${dDow(x.date)} ${dShort(x.date)} vs ${n0(Math.round(x.mean))} normal for that weekday (${x.ratio < 1 ? '−' : '+'}${Math.round(Math.abs(100 - 100 * x.ratio))}%); ${x.cause}`]);
+    cards.push(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Spend and volume signals'), el('span', { class: 'xs muted' }, `spend to ${dShort(sg.asOf)} · enquiries to ${dShort(sg.leadsTo || sg.asOf)}`)),
+      items.length ? el('ul', { class: 'list' }, items.map(([sev, t]) => el('li', {}, el('span', {}, pill('Marketing', sev), ' ', t)))) : el('div', { class: 'empty' }, 'Spend steady week on week; no day outside the normal range for its weekday'),
+      el('p', { class: 'note' }, 'A spend change is flagged above 25% week on week. A day is unusual when its enquiries are below 60% or above 160% of the same weekday over the previous four weeks; if Google Ads spend moved the same way it is marketing, otherwise it is a routing or form fault to check first.')));
+    return cards;
+  }
   // ---------- v2.3: lead funnel (data/leads.json, aggregates only, from the CRM) ----------
   const hrs = m => m == null ? '–' : m < 90 ? `${Math.round(m)} min` : m < 2880 ? `${n1(m / 60)} h` : `${n1(m / 1440)} days`;
   function channelRows(L, month) {
@@ -1259,6 +1356,7 @@
       kpi('Allocated within 24 h', allLeads ? Math.round(w24 / allLeads) + '%' : '–', 'enquiry → registrar in the CRM', allLeads && w24 / allLeads < 60 ? 'bad' : ''),
       kpi('Unconverted leads', n0(pools.d7_30 + pools.d30_plus), `${n0(pools.d7_30)} aged 7–30 days · ${n0(pools.d30_plus)} older`),
     ));
+    const sigs = signalsCards(D, L, S.ads); for (const c of sigs) out.push(c);
     // true demand: every submission (new contact or repeat enquiry), from the GF-list automation entries
     const DM = L.demand || null; const DMm = DM ? (DM.monthly[D.month] || {}) : {};
     if (DM) {

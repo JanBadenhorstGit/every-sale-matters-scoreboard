@@ -228,6 +228,11 @@ def main(sales, coll, leads=None):
                     if a_ and a_.get('cost') and v.get('registered'):
                         bits.append((col.split()[0] + ' ' + ch, a_['cost'] / v['registered'], a_['cost']))
             if bits: L.append('- Ad spend per registration this month: ' + ' · '.join(f"{n} R{c:,.0f} (spend R{t/1000:,.0f}k)" for n, c, t in sorted(bits, key=lambda x: -x[1])))
+        try:  # v2.10: spend and volume signals (mirrors marketingSignals in app.js)
+            ADS = load(os.path.join(os.path.dirname(str(leads)), 'ads.json')) if leads else {}
+            L.extend(spend_signals(ADS, LD))
+        except Exception:  # noqa: BLE001
+            pass
         try:
             PAY = load(os.path.join(os.path.dirname(str(leads)), 'payments.json')) if leads else {}
         except Exception:  # noqa: BLE001
@@ -246,6 +251,46 @@ def main(sales, coll, leads=None):
         L.append('')
     L.append('Full board: https://janbadenhorstgit.github.io/every-sale-matters-scoreboard/v2/')
     return L[0], '\n'.join(L[2:])
+
+def spend_signals(ADS, LD):
+    """Week-on-week Google Ads spend, zero-spend days and unusual enquiry days, with the spend-moved test."""
+    import datetime as _dt
+    out = []
+    daily = (ADS or {}).get('daily') or {}
+    if not daily: return out
+    gen = (ADS.get('generated_at') or '')[:10]
+    try: as_of = _dt.date.fromisoformat(gen) - _dt.timedelta(days=1)
+    except Exception: return out  # noqa: BLE001
+    def cost(col, d): return (((daily.get(col) or {}).get(d.isoformat()) or {}).get('PPC') or {}).get('cost') or 0
+    def span(col, a, b): return sum(cost(col, a + _dt.timedelta(days=i)) for i in range((b - a).days + 1))
+    for col in daily:
+        cur = span(col, as_of - _dt.timedelta(days=6), as_of); prev = span(col, as_of - _dt.timedelta(days=13), as_of - _dt.timedelta(days=7))
+        if prev > 1000 and abs(cur - prev) / prev > 0.25:
+            out.append(f"- MARKETING {col.split()[0]} Google Ads spend {'up' if cur > prev else 'down'} {abs(cur - prev) / prev * 100:.0f}% week on week (R{cur/1000:,.0f}k vs R{prev/1000:,.0f}k, 7 days to {as_of.strftime('%-d %b')})")
+        for i in (2, 1, 0):
+            d = as_of - _dt.timedelta(days=i); mean = sum(cost(col, d - _dt.timedelta(days=k)) for k in (7, 14, 21, 28)) / 4
+            if mean > 500 and cost(col, d) < 0.05 * mean:
+                out.append(f"- MARKETING {col.split()[0]}: no Google Ads spend on {d.strftime('%a %-d %b')} (normally R{mean/1000:,.1f}k that weekday). Check account status and billing.")
+    dd = ((LD or {}).get('demand') or {}).get('daily') or {}
+    to = ((LD or {}).get('window') or {}).get('to')
+    days = sorted(k for k in dd if not to or k <= to)[-3:]
+    for k in days:
+        d = _dt.date.fromisoformat(k)
+        for col, v in dd[k].items():
+            hist = [dd[(d - _dt.timedelta(days=7 * j)).isoformat()][col]['enquiries'] for j in (1, 2, 3, 4) if (d - _dt.timedelta(days=7 * j)).isoformat() in dd and col in dd[(d - _dt.timedelta(days=7 * j)).isoformat()]]
+            if len(hist) < 3: continue
+            mean = sum(hist) / len(hist)
+            if mean < 30: continue
+            ratio = v['enquiries'] / mean
+            if ratio < 0.6 or ratio > 1.6:
+                sp = cost(col, d); sph = sum(cost(col, d - _dt.timedelta(days=7 * j)) for j in (1, 2, 3, 4)) / 4
+                sr = sp / sph if sph else None
+                if d > as_of: cause = 'spend not yet reported for this day'
+                elif sr is None: cause = 'no Google Ads spend on this weekday either way'
+                elif (ratio < 1 and sr < 0.75) or (ratio > 1 and sr > 1.4): cause = 'spend moved with it: marketing'
+                else: cause = 'spend did not move: check routing and forms'
+                out.append(f"- MARKETING {col.split()[0]}: {v['enquiries']:,} enquiries on {d.strftime('%a %-d %b')} vs {mean:,.0f} normal for that weekday ({(ratio-1)*100:+.0f}%); {cause}")
+    return out
 
 if __name__ == '__main__':
     a = sys.argv[1:] or ['v2/data/sales.json', 'v2/data/collections.json', 'v2/data/leads.json']
