@@ -35,6 +35,8 @@
   const cycleMonthOf = d => { const s = d.getDate() >= 8 ? new Date(d.getFullYear(), d.getMonth(), 1) : new Date(d.getFullYear(), d.getMonth() - 1, 1); return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}`; };
   const nextMonthKey = m => { const y = +m.slice(0, 4), mo = +m.slice(5, 7); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; };
   const cycleLabel = m => `8 ${MONTHS[+m.slice(5, 7) - 1]} – 7 ${MONTHS[+nextMonthKey(m).slice(5, 7) - 1]}`;
+  // South African public holidays (no debit-order or EFT processing): treated like weekends.
+  const SA_HOLIDAYS = new Set(['2026-11-04', '2026-12-16', '2026-12-25', '2026-12-26', '2027-01-01', '2027-03-22', '2027-03-26', '2027-03-29', '2027-04-27', '2027-05-01', '2027-06-16', '2027-08-09', '2027-09-24', '2027-12-16', '2027-12-25', '2027-12-27']);
   const cycleDayDate = (m, dom) => { const mm = dom >= 8 ? m : nextMonthKey(m); return `${mm}-${String(dom).padStart(2, '0')}`; };
   const CYCLE = cycleMonthOf(sastToday());
   const TODAY = ymd(sastToday());
@@ -403,7 +405,7 @@
           const bankDays = Object.values(bank).flatMap(o => o.days).filter(d => d.date <= upTo);
           const bankSum = bankDays.reduce((s, d) => s + (d.collections || 0), 0);
           const filled = new Set(bankDays.filter(d => d.collections != null).map(d => d.date));
-          const want = []; for (let d = new Date(cycleDayDate(gm, 8) + 'T00:00:00'); ymd(d) <= upTo; d.setDate(d.getDate() + 1)) if (![0, 6].includes(d.getDay()) && !filled.has(ymd(d))) want.push(ymd(d));
+          const want = []; for (let d = new Date(cycleDayDate(gm, 8) + 'T00:00:00'); ymd(d) <= upTo; d.setDate(d.getDate() + 1)) if (![0, 6].includes(d.getDay()) && !SA_HOLIDAYS.has(ymd(d)) && !filled.has(ymd(d))) want.push(ymd(d));
           const diff = lastRow.actual_cum - bankSum;
           if (Math.abs(diff) > Math.max(10000, 0.02 * lastRow.actual_cum)) add('Data', 'warn', `Goal tab shows ${randK(lastRow.actual_cum)} banked to ${dShort(upTo)} but the bank tabs add up to ${randK(bankSum)}` + (want.length ? `; no bank rows for ${want.slice(0, 4).map(dShort).join(', ')}${want.length > 4 ? ` +${want.length - 4}` : ''}` : ''), 'collections');
         }
@@ -1061,8 +1063,8 @@
     // Day view: the latest complete day (yesterday or earlier) against its goal, and the goal for today.
     const dayGoal = dom => g ? g.find(r => r.dom === dom) : null;
     const bankDays = bank ? [...new Set(Object.values(bank).flatMap(o => o.days.map(d => d.date)))].sort() : [];
-    const isWeekend = d => [0, 6].includes(new Date(d + 'T00:00:00').getDay());
-    const completeDays = bankDays.filter(d => d < TODAY && !isWeekend(d)); // weekends bank nothing; judge the last banking day
+    const isWeekend = d => [0, 6].includes(new Date(d + 'T00:00:00').getDay()) || SA_HOLIDAYS.has(d);
+    const completeDays = bankDays.filter(d => d < TODAY && !isWeekend(d)); // weekends and public holidays bank nothing; judge the last banking day
     const lastDay = completeDays.length ? completeDays[completeDays.length - 1] : null;
     const dayColl = date => bank ? Object.values(bank).reduce((t, o) => t + o.days.filter(d => d.date === date).reduce((u, d) => u + (d.collections || 0), 0), 0) : null;
     const lastDayColl = lastDay ? dayColl(lastDay) : null;
