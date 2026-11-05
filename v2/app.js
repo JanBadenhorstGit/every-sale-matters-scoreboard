@@ -1478,7 +1478,18 @@
   }
 
   // ---------- shell ----------
-  const VIEWS = { leadership: viewLeadership, 'sales-manager': viewSalesManager, 'sales-agent': viewSalesAgent, 'collections-manager': viewCollectionsManager, 'collections-agent': viewCollectionsAgent, marketing: viewMarketing };
+  // Lead Dealer: hidden view (#role=lead-dealer), not in the menu until Johan approves the dealer.
+  // The controls live in a Google web app behind the Skills Academy login, because this board is public.
+  const DEALER_PANEL = 'https://script.google.com/a/macros/skillsacademy.edu.za/s/AKfycbxQpeFvsLCylvKN-y-xVJS92_VgjLWRka7OWi_WjI5X6vA-2qmQJ7SFl2-_4twRfe0b/exec';
+  function viewLeadDealer() {
+    return [el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h2', {}, 'Lead Dealer'), el('span', { class: 'xs muted' }, 'Johan\u2019s panel')),
+      el('p', {}, 'Choose who is on the floor today, give someone a bigger or smaller share, and see how many leads each registrar has had today.'),
+      el('p', {}, el('a', { href: DEALER_PANEL, target: '_blank', rel: 'noopener', class: 'btn', style: 'text-decoration:none;display:inline-block;padding:8px 16px' }, 'Open the Lead Dealer panel')),
+      el('p', { class: 'note' }, 'Opens with your Skills Academy Google account. Only people Jan has added can make changes, and every change is recorded with the person\u2019s name.'))];
+  }
+
+  const VIEWS = { leadership: viewLeadership, 'sales-manager': viewSalesManager, 'sales-agent': viewSalesAgent, 'collections-manager': viewCollectionsManager, 'collections-agent': viewCollectionsAgent, marketing: viewMarketing, 'lead-dealer': viewLeadDealer };
 
   function render() {
     const D = S.sales, C = S.coll;
