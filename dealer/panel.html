@@ -1,0 +1,84 @@
+<!doctype html><html><head><meta charset="utf-8"><base target="_top">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2433;--mute:#5b6577;--line:#e3e6eb;--acc:#3b5bdb;--ok:#2b8a3e;--warn:#b35c00;--bad:#c92a2a}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#1d2433;color:#fff;padding:14px 20px}header h1{margin:0;font-size:19px;font-weight:600}header p{margin:2px 0 0;color:#c5cad3;font-size:13px}
+main{max-width:1050px;margin:0 auto;padding:16px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.box h3{margin:0 0 6px;font-size:13px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.mode{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;font-size:13px}
+.m-SHADOW{background:#e7ecff;color:#2541b2}.m-LIVE{background:#d3f9d8;color:#1b6b2c}.m-OFF{background:#eceef1;color:#5b6577}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{border:0;background:#fff;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.seg button+button{border-left:1px solid var(--line)}.seg button.on{background:var(--acc);color:#fff}
+.tabs{display:flex;gap:6px;margin:6px 0 10px}.tabs button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;font:inherit;cursor:pointer;color:var(--ink)}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}th{font-size:12.5px;color:var(--mute);font-weight:600;background:#fafbfc}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}tr.off td{color:#98a1b0}tr.changed td{background:#fff9db}
+.sw{position:relative;width:44px;height:24px;display:inline-block}.sw input{opacity:0;width:0;height:0}
+.sl{position:absolute;inset:0;background:#cfd4dc;border-radius:999px;transition:.15s;cursor:pointer}.sl:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.sw input:checked+.sl{background:var(--ok)}.sw input:checked+.sl:before{transform:translateX(20px)}.sw input:disabled+.sl{cursor:not-allowed;opacity:.6}
+select,input[type=number]{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}input[type=number]{width:70px}
+.bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 16px;display:none;justify-content:space-between;align-items:center;gap:10px;box-shadow:0 -2px 8px rgba(0,0,0,.05)}
+.bar.show{display:flex}.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.note{color:var(--mute);font-size:13px}.warn{color:var(--warn)}.bad{color:var(--bad)}.msg{margin:8px 0;padding:8px 12px;border-radius:8px;display:none}.msg.show{display:block}.msg.ok{background:#d3f9d8}.msg.err{background:#ffe3e3}
+@media(max-width:640px){th:nth-child(2),td:nth-child(2){display:none}}
+</style></head><body>
+<header><h1>Lead Dealer – Johan’s panel</h1><p id="sub">Loading…</p></header>
+<main>
+<div id="msg" class="msg"></div>
+<div class="strip" id="strip"></div>
+<div class="note" id="explain"></div>
+<div class="tabs" id="tabs"></div>
+<div id="tbl"></div>
+<p class="note">On floor = gets new leads today. Weight 1 = an equal share; 0.5 = half a share; 2 = a double share. Daily cap = the most leads someone gets in a day (blank = no limit). Changes apply at the next run, within 5 minutes. Every change is recorded with your name.</p>
+</main>
+<div class="bar" id="bar"><span id="count"></span><span><button class="btn sec" onclick="discard()">Undo changes</button> <button class="btn" id="save" onclick="save()">Save</button></span></div>
+<script>
+var D=null, college='Skills', edits={}, modeEdits={};
+function el(t,a,h){var e=document.createElement(t);if(a)for(var k in a)e.setAttribute(k,a[k]);if(h!=null)e.innerHTML=h;return e}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function load(){google.script.run.withSuccessHandler(function(d){D=d;render()}).withFailureHandler(fail).getPanelData()}
+function fail(e){show(String(e.message||e),'err')}
+function show(t,k){var m=document.getElementById('msg');m.textContent=t;m.className='msg show '+k;if(k==='ok')setTimeout(function(){m.className='msg'},4000)}
+function dirty(){return Object.keys(edits).length+Object.keys(modeEdits).length}
+function render(){
+  var u=D.user;document.getElementById('sub').textContent='Today '+D.today+' · updated '+D.at+' · '+(u.me||'unknown user')+(u.canEdit?'':' (view only)');
+  var s=document.getElementById('strip');s.innerHTML='';
+  ['Skills','Bellview','Matric'].forEach(function(c){
+    var m=modeEdits[c]||D.modes[c],b=el('div',{class:'box'});b.appendChild(el('h3',null,c));
+    if(u.canSwitch){var g=el('div',{class:'seg'});['OFF','SHADOW','LIVE'].forEach(function(x){var bt=el('button',x===m?{class:'on'}:null,x);bt.onclick=function(){if(x===D.modes[c])delete modeEdits[c];else{if(x==='LIVE'&&!confirm('Switch '+c+' to LIVE? From the next run the dealer writes new leads onto the registrar pages.'))return;modeEdits[c]=x}render()};g.appendChild(bt)});b.appendChild(g)}
+    else b.appendChild(el('span',{class:'mode m-'+m},m));
+    var nd=D.notDealt[c]||0;b.appendChild(el('div',{class:'note',style:'margin-top:6px'},(nd?'<span class="bad">'+nd+' lead(s) could not be dealt today</span>':'All leads dealt')+(D.dup[c]?' · '+D.dup[c]+' duplicates skipped':'')));
+    s.appendChild(b)});
+  var st=el('div',{class:'box'});st.appendChild(el('h3',null,'Dealer status'));
+  st.appendChild(el('div',{class:'note'},'Last run: '+esc(D.lastRun||'–')+'<br>Last page check: '+esc(D.lastCheck||'–')+'<br>Hand-out from '+esc(D.start)+'; leads after '+esc(D.cutoff)+' go to the next working day'+(D.weekend?'':'; weekend leads go to Monday')+(D.warnings&&D.warnings!=='none'?'<br><span class="warn">'+esc(D.warnings)+'</span>':'')));
+  s.appendChild(st);
+  var anyShadow=['Skills','Bellview','Matric'].some(function(c){return D.modes[c]==='SHADOW'});
+  document.getElementById('explain').innerHTML=anyShadow?'<p><b>Shadow</b> means the dealer only works out who it would give each lead to. Nothing changes on the pages. <b>Dealer today</b> shows its picks; <b>On pages today</b> shows the real hand-out.</p>':'';
+  var t=document.getElementById('tabs');t.innerHTML='';
+  Object.keys(D.colleges).forEach(function(c){var b=el('button',c===college?{class:'on'}:null,c);b.onclick=function(){college=c;render()};t.appendChild(b)});
+  var rows=D.colleges[college]||[],h='<table><thead><tr><th>Registrar</th><th>Teams</th><th>On floor</th><th>Weight</th><th>Daily cap</th><th class="num">Dealer today</th><th class="num">On pages today</th></tr></thead><tbody>';
+  rows.forEach(function(p,i){var k=college+'|'+p.name,e=edits[k]||{},on=e.onFloor!=null?e.onFloor:p.onFloor,w=e.weight!=null?e.weight:p.weight,cap=e.cap!=null?e.cap:p.cap,dis=u.canEdit?'':' disabled';
+    var ws=[0.25,0.5,0.75,1,1.25,1.5,2,3];if(ws.indexOf(Number(w))<0)ws.push(Number(w));ws.sort(function(a,b){return a-b});
+    h+='<tr class="'+(on?'':'off ')+(edits[k]?'changed':'')+'"><td><b>'+esc(p.name)+'</b></td><td class="note">'+esc(teamLabel(p.teams))+'</td>'+
+    '<td><label class="sw"><input type="checkbox" data-k="'+esc(k)+'" data-f="onFloor"'+(on?' checked':'')+dis+'><span class="sl"></span></label></td>'+
+    '<td><select data-k="'+esc(k)+'" data-f="weight"'+dis+'>'+ws.map(function(x){return '<option'+(Number(w)===x?' selected':'')+'>'+x+'</option>'}).join('')+'</select></td>'+
+    '<td><input type="number" min="0" max="500" placeholder="none" value="'+esc(cap)+'" data-k="'+esc(k)+'" data-f="cap"'+dis+'></td>'+
+    '<td class="num">'+p.dealt+'</td><td class="num">'+p.actual+'</td></tr>'});
+  document.getElementById('tbl').innerHTML='<div style="overflow-x:auto">'+h+'</tbody></table></div>';
+  document.querySelectorAll('#tbl [data-k]').forEach(function(x){x.onchange=function(){var k=x.dataset.k,f=x.dataset.f,p=find(k),v=f==='onFloor'?x.checked:x.value;var e=edits[k]||{};e[f]=f==='weight'?Number(v):v;
+    var same=(e.onFloor==null||e.onFloor===p.onFloor)&&(e.weight==null||Number(e.weight)===Number(p.weight))&&(e.cap==null||String(e.cap)===String(p.cap));if(same)delete edits[k];else edits[k]=e;render()}});
+  var n=dirty();document.getElementById('bar').className='bar'+(n?' show':'');document.getElementById('count').textContent=n+' unsaved change'+(n===1?'':'s');
+}
+var TL={'AF':'Afrikaans','OTHER':'English & African languages','ICB':'ICB','NF':'No funds','NF-AF':'No funds (Afrikaans)'};
+function teamLabel(t){if(!t)return '–';return t.split(/,\s*/).map(function(x){return TL[x]||x}).join(' · ')}
+function find(k){var a=k.split('|');return D.colleges[a[0]].filter(function(p){return p.name===a[1]})[0]}
+function discard(){edits={};modeEdits={};render()}
+function save(){var r=[];Object.keys(edits).forEach(function(k){var p=find(k),e=edits[k],a=k.split('|');r.push({college:a[0],name:a[1],onFloor:e.onFloor!=null?e.onFloor:p.onFloor,weight:e.weight!=null?e.weight:p.weight,cap:e.cap!=null?e.cap:p.cap})});
+  var b=document.getElementById('save');b.disabled=true;b.textContent='Saving…';
+  google.script.run.withSuccessHandler(function(res){edits={};modeEdits={};b.disabled=false;b.textContent='Save';show('Saved '+res.saved+' change(s). They apply at the next run.','ok');load()})
+  .withFailureHandler(function(e){b.disabled=false;b.textContent='Save';fail(e)}).savePanel({roster:r,modes:Object.keys(modeEdits).length?modeEdits:null})}
+setInterval(function(){if(!dirty())load()},120000);load();
+</script></body></html>

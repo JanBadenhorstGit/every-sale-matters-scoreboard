@@ -1,3 +1,5 @@
 sheets/
 sheets_private/
 __pycache__/
+dealer/*.gs.js
+dealer/oct_handouts.json

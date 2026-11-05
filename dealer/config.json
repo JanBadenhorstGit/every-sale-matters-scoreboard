@@ -1,0 +1,26 @@
+{
+ "routes": [
+  {"label":"Matric NF Henry list","college":"Matric","kind":"NF","lang":"*","course":"*","source":"HENRY","teams":"Henry"},
+  {"label":"Matric NF Natasha list","college":"Matric","kind":"NF","lang":"*","course":"*","source":"NATASHA","teams":"Natasha"},
+  {"label":"Matric NF Hulda list","college":"Matric","kind":"NF","lang":"*","course":"*","source":"HULDA","teams":"Hulda"},
+  {"label":"Skills NF Afrikaans","college":"Skills","kind":"NF","lang":"AF","course":"*","source":"*","teams":"NF-AF"},
+  {"label":"Skills NF","college":"Skills","kind":"NF","lang":"*","course":"*","source":"*","teams":"NF"},
+  {"label":"Bellview NF","college":"Bellview","kind":"NF","lang":"*","course":"*","source":"*","teams":"NF"},
+  {"label":"Skills ICB","college":"Skills","kind":"FRESH","lang":"*","course":"ICB","source":"*","teams":"ICB"},
+  {"label":"Bellview ICB","college":"Bellview","kind":"FRESH","lang":"*","course":"ICB","source":"*","teams":"ICB"},
+  {"label":"Afrikaans","college":"*","kind":"FRESH","lang":"AF","course":"*","source":"*","teams":"AF"},
+  {"label":"Skills African languages","college":"Skills","kind":"FRESH","lang":"AFRICAN","course":"*","source":"*","teams":"OTHER"},
+  {"label":"Skills English matric","college":"Skills","kind":"FRESH","lang":"*","course":"MATRIC","source":"*","teams":"OTHER:83,AF:17"},
+  {"label":"Skills English other","college":"Skills","kind":"FRESH","lang":"*","course":"*","source":"*","teams":"AF:64,OTHER:36"},
+  {"label":"Bellview African languages","college":"Bellview","kind":"FRESH","lang":"AFRICAN","course":"*","source":"*","teams":"OTHER:90,AF:10"},
+  {"label":"Bellview English","college":"Bellview","kind":"FRESH","lang":"*","course":"*","source":"*","teams":"OTHER:80,AF:20"},
+  {"label":"Matric African languages","college":"Matric","kind":"FRESH","lang":"AFRICAN","course":"*","source":"*","teams":"OTHER:79,AF:21"},
+  {"label":"Matric English","college":"Matric","kind":"FRESH","lang":"*","course":"*","source":"*","teams":"OTHER:66,AF:34"}
+ ],
+ "roster": [
+  ["Andre","Skills","AF"],["Christa","Skills","AF,ICB,NF-AF"],["Debbie","Skills","AF,ICB"],["Leigh","Skills","AF,ICB"],["Willem","Skills","AF,ICB"],
+  ["Kenneth","Skills","OTHER,ICB"],["Ntase","Skills","OTHER"],["Liza","Skills","OTHER"],["Grace","Skills","OTHER"],["Vinolia","Skills","OTHER,ICB"],["Prince","Skills","OTHER,ICB"],["Nthabiseng","Skills","OTHER"],["Roxanne","Skills","OTHER"],["Pheletso","Skills","NF"],
+  ["Nadia","Bellview","AF,ICB"],["Mpho","Bellview","AF"],["Christinah","Bellview","OTHER"],["Duduzile","Bellview","OTHER"],["Eno","Bellview","OTHER"],["Lesego","Bellview","OTHER"],["Mpumi","Bellview","OTHER"],["Priscilla","Bellview","OTHER"],["Keeletse","Bellview","OTHER,NF"],
+  ["Hulda","Matric","AF"],["ChristaM","Matric","AF"],["Clauday","Matric","AF,OTHER"],["Lindiwe","Matric","OTHER"],["Palesa","Matric","OTHER"],["Henry","Matric","OTHER"],["Natasha","Matric","OTHER"]
+ ]
+}

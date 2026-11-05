@@ -1478,7 +1478,7 @@
   }
 
   // ---------- shell ----------
-  // Lead Dealer: hidden view (#role=lead-dealer), not in the menu until Johan approves the dealer.
+  // Lead Dealer view (#role=lead-dealer). Since 5 Nov 2026 it is in the menu.
   // The controls live in a Google web app behind the Skills Academy login, because this board is public.
   const DEALER_PANEL = 'https://script.google.com/a/macros/skillsacademy.edu.za/s/AKfycbxQpeFvsLCylvKN-y-xVJS92_VgjLWRka7OWi_WjI5X6vA-2qmQJ7SFl2-_4twRfe0b/exec';
   function viewLeadDealer() {
