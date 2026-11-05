@@ -1,5 +1,5 @@
 {
-"generated_at": "2026-11-04T09:55:00.000Z",
+"generated_at": "2026-11-05T08:29:37.000Z",
 "source": "PPC = Google Ads API campaign report (cost_micros/1e6, ZAR). Facebook = Meta Marketing API account-level amount_spent (ZAR). Matric College Facebook spend not available yet.",
 "accounts": {
 "PPC": {
@@ -10,7 +10,7 @@
 "Facebook": {
 "Skills Academy": "2879824205642596 (Skills_Academy_Backup)",
 "Bellview Inst.": "562792675051629",
-"Matric College": "698352734678325 (not yet readable via API)"
+"Matric College": "698352734678325"
 }
 },
 "daily": {
@@ -468,6 +468,9 @@
 "cost": 11353,
 "clicks": 2255,
 "conv": 563
+},
+"Facebook": {
+"cost": 2843
 }
 },
 "2026-10-23": {
@@ -475,6 +478,9 @@
 "cost": 7922,
 "clicks": 1799,
 "conv": 360
+},
+"Facebook": {
+"cost": 1485
 }
 },
 "2026-10-25": {
@@ -482,6 +488,9 @@
 "cost": 3736,
 "clicks": 2209,
 "conv": 317
+},
+"Facebook": {
+"cost": 2021
 }
 },
 "2026-10-26": {
@@ -489,6 +498,9 @@
 "cost": 6006,
 "clicks": 2428,
 "conv": 441
+},
+"Facebook": {
+"cost": 3062
 }
 },
 "2026-10-27": {
@@ -496,6 +508,9 @@
 "cost": 2916,
 "clicks": 1093,
 "conv": 231
+},
+"Facebook": {
+"cost": 2895
 }
 },
 "2026-10-30": {
@@ -503,20 +518,29 @@
 "cost": 5036,
 "clicks": 2478,
 "conv": 460
+},
+"Facebook": {
+"cost": 1861
 }
 },
 "2026-11-01": {
 "PPC": {
-"cost": 3121,
+"cost": 3122,
 "clicks": 1635,
 "conv": 271
+},
+"Facebook": {
+"cost": 1857
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 4366,
+"cost": 4367,
 "clicks": 1674,
-"conv": 366
+"conv": 372
+},
+"Facebook": {
+"cost": 2787
 }
 },
 "2026-08-29": {
@@ -535,9 +559,32 @@
 },
 "2026-11-03": {
 "PPC": {
-"cost": 4759,
-"clicks": 1738,
-"conv": 377
+"cost": 4745,
+"clicks": 1730,
+"conv": 390
+},
+"Facebook": {
+"cost": 2570
+}
+},
+"2026-11-04": {
+"PPC": {
+"cost": 4306,
+"clicks": 1873,
+"conv": 365
+},
+"Facebook": {
+"cost": 2512
+}
+},
+"2026-10-28": {
+"Facebook": {
+"cost": 2950
+}
+},
+"2026-10-29": {
+"Facebook": {
+"cost": 2893
 }
 }
 },
@@ -1009,6 +1056,9 @@
 "cost": 7501,
 "clicks": 3493,
 "conv": 929
+},
+"Facebook": {
+"cost": 1939
 }
 },
 "2026-10-23": {
@@ -1016,6 +1066,9 @@
 "cost": 7022,
 "clicks": 2357,
 "conv": 590
+},
+"Facebook": {
+"cost": 1060
 }
 },
 "2026-10-25": {
@@ -1023,6 +1076,9 @@
 "cost": 10240,
 "clicks": 5817,
 "conv": 844
+},
+"Facebook": {
+"cost": 1447
 }
 },
 "2026-10-26": {
@@ -1030,6 +1086,9 @@
 "cost": 14277,
 "clicks": 7086,
 "conv": 1212
+},
+"Facebook": {
+"cost": 2158
 }
 },
 "2026-10-27": {
@@ -1037,6 +1096,9 @@
 "cost": 7121,
 "clicks": 3361,
 "conv": 607
+},
+"Facebook": {
+"cost": 2042
 }
 },
 "2026-10-30": {
@@ -1044,27 +1106,59 @@
 "cost": 2941,
 "clicks": 1129,
 "conv": 258
+},
+"Facebook": {
+"cost": 1215
 }
 },
 "2026-11-01": {
 "PPC": {
 "cost": 5708,
 "clicks": 3501,
-"conv": 367
+"conv": 368
+},
+"Facebook": {
+"cost": 1400
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 8752,
-"clicks": 4476,
-"conv": 591
+"cost": 8737,
+"clicks": 4466,
+"conv": 598
+},
+"Facebook": {
+"cost": 2021
 }
 },
 "2026-11-03": {
 "PPC": {
-"cost": 8252,
-"clicks": 4238,
-"conv": 517
+"cost": 8236,
+"clicks": 4237,
+"conv": 553
+},
+"Facebook": {
+"cost": 1911
+}
+},
+"2026-11-04": {
+"PPC": {
+"cost": 7646,
+"clicks": 3693,
+"conv": 369
+},
+"Facebook": {
+"cost": 1726
+}
+},
+"2026-10-28": {
+"Facebook": {
+"cost": 2045
+}
+},
+"2026-10-29": {
+"Facebook": {
+"cost": 2010
 }
 }
 },
@@ -1522,6 +1616,9 @@
 "cost": 3065,
 "clicks": 894,
 "conv": 162
+},
+"Facebook": {
+"cost": 2000
 }
 },
 "2026-10-23": {
@@ -1529,6 +1626,9 @@
 "cost": 1565,
 "clicks": 354,
 "conv": 73
+},
+"Facebook": {
+"cost": 1120
 }
 },
 "2026-10-25": {
@@ -1536,6 +1636,9 @@
 "cost": 1088,
 "clicks": 404,
 "conv": 48
+},
+"Facebook": {
+"cost": 1499
 }
 },
 "2026-10-26": {
@@ -1543,6 +1646,9 @@
 "cost": 2892,
 "clicks": 970,
 "conv": 150
+},
+"Facebook": {
+"cost": 2226
 }
 },
 "2026-10-27": {
@@ -1550,6 +1656,9 @@
 "cost": 1253,
 "clicks": 380,
 "conv": 59
+},
+"Facebook": {
+"cost": 2088
 }
 },
 "2026-10-30": {
@@ -1557,20 +1666,29 @@
 "cost": 432,
 "clicks": 129,
 "conv": 19
+},
+"Facebook": {
+"cost": 1254
 }
 },
 "2026-11-01": {
 "PPC": {
 "cost": 481,
 "clicks": 151,
-"conv": 17
+"conv": 18
+},
+"Facebook": {
+"cost": 3575
 }
 },
 "2026-11-02": {
 "PPC": {
-"cost": 1619,
-"clicks": 480,
-"conv": 78
+"cost": 1613,
+"clicks": 479,
+"conv": 83
+},
+"Facebook": {
+"cost": 2347
 }
 },
 "2026-08-01": {
@@ -1589,9 +1707,32 @@
 },
 "2026-11-03": {
 "PPC": {
-"cost": 1860,
+"cost": 1862,
 "clicks": 470,
-"conv": 75
+"conv": 82
+},
+"Facebook": {
+"cost": 2213
+}
+},
+"2026-11-04": {
+"PPC": {
+"cost": 1142,
+"clicks": 352,
+"conv": 41
+},
+"Facebook": {
+"cost": 1986
+}
+},
+"2026-10-28": {
+"Facebook": {
+"cost": 2149
+}
+},
+"2026-10-29": {
+"Facebook": {
+"cost": 2089
 }
 }
 }
@@ -2020,7 +2161,7 @@
 "2026-10": {
 "Skills Academy": {
 "PPC": {
-"cost": 211296,
+"cost": 211297,
 "clicks": 59426,
 "conv": 11487,
 "impressions": 1544566,
@@ -2105,9 +2246,9 @@
 },
 "Matric College": {
 "PPC": {
-"cost": 126998,
+"cost": 126997,
 "clicks": 62217,
-"conv": 10455,
+"conv": 10458,
 "impressions": 3826421,
 "campaigns": {
 "Matric Campaign 2026": {
@@ -2153,13 +2294,18 @@
 "conv": 456
 }
 }
+},
+"Facebook": {
+"cost": 37591,
+"impressions": 2773379,
+"clicks": 59340
 }
 },
 "Bellview Inst.": {
 "PPC": {
-"cost": 62117,
+"cost": 62116,
 "clicks": 16627,
-"conv": 3132,
+"conv": 3134,
 "impressions": 577095,
 "campaigns": {
 "Matric Upgrade Campaign 2026": {
@@ -2230,9 +2376,9 @@
 "2026-11": {
 "Skills Academy": {
 "PPC": {
-"cost": 12246,
-"clicks": 1878,
-"conv": 282,
+"cost": 16540,
+"clicks": 6912,
+"conv": 1398,
 "impressions": 84992,
 "campaigns": {
 "Beauty Courses 2026": {
@@ -2308,16 +2454,16 @@
 }
 },
 "Facebook": {
-"cost": 2502,
-"impressions": 164239,
-"clicks": 3387
+"cost": 10430,
+"impressions": 761608,
+"clicks": 16333
 }
 },
 "Matric College": {
 "PPC": {
-"cost": 22712,
-"clicks": 4046,
-"conv": 376,
+"cost": 30327,
+"clicks": 15897,
+"conv": 1888,
 "impressions": 278163,
 "campaigns": {
 "Matric Campaign 2026": {
@@ -2363,13 +2509,18 @@
 "conv": 25
 }
 }
+},
+"Facebook": {
+"cost": 7675,
+"impressions": 591472,
+"clicks": 13148
 }
 },
 "Bellview Inst.": {
 "PPC": {
-"cost": 3960,
-"clicks": 178,
-"conv": 18,
+"cost": 5098,
+"clicks": 1452,
+"conv": 224,
 "impressions": 6085,
 "campaigns": {
 "Matric Upgrade Campaign 2026": {
@@ -2431,9 +2582,9 @@
 }
 },
 "Facebook": {
-"cost": 4669,
-"impressions": 136409,
-"clicks": 2393
+"cost": 10633,
+"impressions": 419311,
+"clicks": 9763
 }
 }
 }

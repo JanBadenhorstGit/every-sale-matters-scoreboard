@@ -201,3 +201,16 @@ cannot be judged yet: most Bellview PPC enquiries carry no Source Page.
   contact entering a college's GF-list automation again within an hour writes another row on that sales sheet. Found
   2 Nov 2026 when the Matric GF-list waits were cut to 5 minutes and the 10-minute "Backup Matric GF" retag started
   re-firing the list for 90% of Matric leads.
+
+### v2.10.2 — the 07:45 refresh now rebuilds leads and ad spend on its own (5 Nov 2026)
+
+- The weekday 07:45 automation starts from a fresh clone, so it never had the git-ignored ActiveCampaign cache
+  (`sheets_private/ac/`, ~180 MB of raw contact pages) and could not build `leads.json`; only `collections.json`
+  refreshed. `v2/cache_sync.py pull|push` now keeps that cache as one archive in a private Drive folder owned by
+  Jan ("Casus Radar private cache (do not share)", never shared). Pull takes ~15 s; a warm `pipeline_leads.py
+  --days 45 --refetch 3` run takes 10–15 minutes.
+- `v2/pipeline_ads.py` refreshes `ads.json`: Facebook spend per college from the `meta` CLI (daily for 14 days,
+  monthly totals for this month and last; Matric College's account is now readable, so its Facebook spend is in),
+  and Google Ads daily spend from a patch file the automation builds with the Google Ads connector
+  (`{college: {date: {cost, clicks, conv}}}`). Monthly PPC cost/clicks/conversions for touched months are summed
+  from the daily rows.

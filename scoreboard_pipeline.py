@@ -123,12 +123,27 @@ def parse_day_tab(title):
 
 
 def download(sheet_id, dest):
+    """Public xlsx export (works in GitHub Actions); falls back to the gws CLI export when the public
+    endpoint stalls, which happens from the automation sandbox."""
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        data = r.read()
-    dest.write_bytes(data)
-    return dest
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read()
+        dest.write_bytes(data)
+        return dest
+    except Exception as e:  # noqa: BLE001
+        import json, shutil, subprocess
+        if not shutil.which("gws"):
+            raise
+        print(f"public export failed for {sheet_id} ({e}); using gws export", file=sys.stderr)
+        params = {"fileId": sheet_id, "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+        rel = os.path.relpath(dest, os.getcwd())  # gws refuses output paths outside the working directory
+        r = subprocess.run(["gws", "drive", "files", "export", "--params", json.dumps(params), "-o", rel],
+                           capture_output=True, text=True, timeout=180)
+        if r.returncode != 0 or not dest.exists():
+            raise RuntimeError(f"gws export failed: {r.stderr.strip()[:200]}")
+        return dest
 
 
 def norm(name):
