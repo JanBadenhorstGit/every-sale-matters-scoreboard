@@ -214,3 +214,19 @@ cannot be judged yet: most Bellview PPC enquiries carry no Source Page.
   and Google Ads daily spend from a patch file the automation builds with the Google Ads connector
   (`{college: {date: {cost, clicks, conv}}}`). Monthly PPC cost/clicks/conversions for touched months are summed
   from the daily rows.
+
+### v2.11 — roster from the sales sheets (5 Nov 2026)
+
+- The roster is no longer the comparison sheet's snapshot. Everyone who sells on the Registration Spreadsheets is on it.
+  Active = a sale in the last 30 calendar days; first sale inside that window = new starter; no sale for 30 days =
+  inactive, left out of expected. ClarenceB stays excluded per the Method tab.
+- Baseline per person: the comparison sheet's August daily rate where it exists; otherwise the person's own previous
+  full calendar month (they sold before it started) ÷ that month's recorded days; until then "first month" and no
+  percentage. College and team pace are like-for-like: sales of registrars with a baseline against the sum of their
+  baselines, with first-month starters' sales shown beside it ("vs Aug" is now "vs base").
+- Weekly incentives are computed for everyone on the incentive sheet (`scoreboard.json → incentives_all`), not only
+  comparison-sheet names, so new starters' debit-order and cash incentives show.
+- The daily "selling but not on the comparison-sheet roster" amber is gone. `sales.json → roster_notices` records two
+  one-off notices, each issued once and dated: "New starter: name, first sale date" and "No sales for 30 days: name,
+  last sale date". They appear in Attention and the digest (as NOTE lines) on the day they are issued, and in a
+  "Roster changes" card on the Sales Manager view for 30 days.

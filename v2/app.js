@@ -132,7 +132,8 @@
       let streak = 0;
       for (let i = monthDays.length - 1; i >= 0; i--) { if (series[i] > 0) streak++; else break; }
       const perDay = recorded ? m.reg / recorded : 0;
-      const expected = p.aug_per_day != null ? p.aug_per_day * recorded : null;
+      const base = p.status !== 'inactive' && p.baseline_per_day != null ? p.baseline_per_day : null;
+      const expected = base != null ? base * recorded : null;
       const lastTwo = monthDays.slice(-2).reduce((a, d) => a + ((raw.days[d][p.key] || {}).reg || 0), 0);
       return {
         ...p, today, yesterday: yday, week: w.reg, month: m.reg, m, w, pm, prevMonth: pm.reg,
@@ -141,26 +142,30 @@
         projection: m.reg + perDay * remaining,
         doRate: pctN(m.do, m.reg), paidRate: pctN(m.paid_n, m.reg), avgInst: m.inst_n ? m.inst_sum / m.inst_n : null,
         lowBand: pctN(m.inst.lt400 + m.inst.b400_699, m.reg), fastPay: pctN(m.lead.le7, m.reg), digital: pctN(m.digital, m.reg),
-        lastTwo, series, active: m.reg > 0 || pm.reg > 0 || w.reg > 0,
+        base, lastTwo, series, active: p.status ? p.status !== 'inactive' || m.reg > 0 : (m.reg > 0 || pm.reg > 0 || w.reg > 0),
+        firstMonth: p.status !== 'inactive' && base == null,
       };
     });
 
     const colleges = {};
     for (const p of people) {
-      const c = colleges[p.college] ||= { name: p.college, people: [], m: zero(), w: zero(), pm: zero(), today: 0, expected: 0, augPerDay: 0, series: monthDays.map(() => 0) };
+      const c = colleges[p.college] ||= { name: p.college, people: [], m: zero(), w: zero(), pm: zero(), today: 0, expected: 0, augPerDay: 0, baseReg: 0, firstMonthReg: 0, series: monthDays.map(() => 0) };
       c.people.push(p); add(c.m, p.m); add(c.w, p.w); add(c.pm, p.pm); c.today += p.today;
-      if (p.aug_per_day != null) { c.expected += p.aug_per_day * recorded; c.augPerDay += p.aug_per_day; }
+      // pace is like-for-like: sales of people with a baseline against their expected; first-month starters are shown beside it
+      if (p.base != null) { c.expected += p.base * recorded; c.augPerDay += p.base; c.baseReg += p.m.reg; } else c.firstMonthReg += p.m.reg;
       p.series.forEach((v, i) => c.series[i] += v);
     }
     for (const c of Object.values(colleges)) {
-      c.pct = c.expected ? 100 * c.m.reg / c.expected : null;
+      c.pct = c.expected ? 100 * c.baseReg / c.expected : null;
       c.perDay = recorded ? c.m.reg / recorded : 0;
       c.projection = c.m.reg + c.perDay * remaining;
       c.doRate = pctN(c.m.do, c.m.reg);
     }
     const team = { m: teamFor(monthDays), w: teamFor(weekDays), pm: teamFor(prevMonthDays), today: teamFor([latest]).reg, yesterday: yesterday ? teamFor([yesterday]).reg : null };
     team.expected = Object.values(colleges).reduce((a, c) => a + c.expected, 0);
-    team.pct = team.expected ? 100 * team.m.reg / team.expected : null;
+    team.baseReg = Object.values(colleges).reduce((a, c) => a + c.baseReg, 0);
+    team.firstMonthReg = Object.values(colleges).reduce((a, c) => a + c.firstMonthReg, 0);
+    team.pct = team.expected ? 100 * team.baseReg / team.expected : null;
     team.perDay = recorded ? team.m.reg / recorded : 0;
     team.projection = team.m.reg + team.perDay * remaining;
     team.doRate = pctN(team.m.do, team.m.reg); team.paidRate = pctN(team.m.paid_n, team.m.reg);
@@ -414,13 +419,13 @@
       if (gm) { const g = C.raw.goals[gm]; if (g.derivedDays > 1) add('Data', 'warn', `Goal tab for ${cycleLabel(gm)} not filled past day ${g.sheetTo}; actuals derived from bank tabs`, 'collections'); }
     } else add('Data', 'bad', 'Collections data not available', 'leadership');
     // Sales
-    if (t.pct != null && t.pct < 80) add('Sales', t.pct < 70 ? 'bad' : 'warn', `Team at ${Math.round(t.pct)}% of August pace (${n0(t.m.reg)} vs ${n0(Math.round(t.expected))} expected)`, 'sales');
-    for (const c of Object.values(D.colleges)) if (c.pct != null && c.pct < 75 && c.name !== 'Unknown') add('Sales', 'warn', `${c.name} at ${Math.round(c.pct)}% of August pace`, 'sales');
+    if (t.pct != null && t.pct < 80) add('Sales', t.pct < 70 ? 'bad' : 'warn', `Team at ${Math.round(t.pct)}% of baseline pace (${n0(t.baseReg)} vs ${n0(Math.round(t.expected))} expected${t.firstMonthReg ? `; plus ${n0(t.firstMonthReg)} from first-month starters` : ''})`, 'sales');
+    for (const c of Object.values(D.colleges)) if (c.pct != null && c.pct < 75 && c.name !== 'Unknown') add('Sales', 'warn', `${c.name} at ${Math.round(c.pct)}% of baseline pace`, 'sales');
     if (t.doRate != null && t.doRate < 85) add('Sales', 'warn', `Debit-order rate ${Math.round(t.doRate)}% on this month's sales`, 'sales');
     const topZero = D.people.filter(p => p.active && p.prevMonth >= 40 && p.today === 0 && p.m.reg > 0).map(p => p.name);
     if (topZero.length) add('Sales', 'warn', `No sale on ${dShort(D.latest)} from ${topZero.slice(0, 5).join(', ')}${topZero.length > 5 ? ` +${topZero.length - 5}` : ''} (each sold 40+ last month)`, 'sales');
-    const unr = D.people.filter(p => p.unrostered && p.m.reg > 0);
-    if (unr.length) add('Sales', 'warn', `${unr.length} registrar${unr.length === 1 ? '' : 's'} selling but not on the comparison-sheet roster: ${unr.map(p => p.name).join(', ')}`, 'sales');
+    // one-off roster notices: shown on the day they are issued only (the full list stays in the Roster changes card)
+    for (const n of (D.raw.roster_notices || []).filter(n => n.issued === ymd(new Date()))) add('Sales', 'info', n.type === 'new_starter' ? `New starter: ${n.name} (${n.college}), first sale ${dShort(n.date)}` : `No sales for 30 days: ${n.name} (${n.college}), last sale ${dShort(n.date)}; left out of expected`, 'sales');
     const cm = (D.raw.course_months || {})[D.month] || {};
     for (const [fam, v] of Object.entries(cm)) if (v.n >= 10 && v.do / v.n < 0.7) add('Sales', 'warn', `${fam}: only ${pct(v.do, v.n)} of ${v.n} sales have a debit order`, 'sales');
     // Leads: the same contact re-entering a college's GF-list automation within an hour writes a duplicate sales-sheet row (seen 2 Nov 2026: Matric wait cut to 5 min, 10-min backup retag re-fired)
@@ -454,7 +459,7 @@
   function alertsCard(D, C, scope) {
     const all = alertsFor(D, C);
     const list = all.filter(a => scope === 'leadership' || a.role === scope || a.role === 'leadership');
-    return el('div', { class: 'card alerts' }, el('div', { class: 'card-head' }, el('h2', {}, 'Attention'), el('span', { class: 'xs muted' }, `${list.filter(a => a.sev === 'bad').length} red · ${list.filter(a => a.sev !== 'bad').length} amber`)),
+    return el('div', { class: 'card alerts' }, el('div', { class: 'card-head' }, el('h2', {}, 'Attention'), el('span', { class: 'xs muted' }, `${list.filter(a => a.sev === 'bad').length} red · ${list.filter(a => a.sev === 'warn').length} amber` + (list.some(a => a.sev === 'info') ? ` · ${list.filter(a => a.sev === 'info').length} notice${list.filter(a => a.sev === 'info').length === 1 ? '' : 's'}` : ''))),
       list.length ? el('ul', { class: 'list' }, list.map(a => el('li', {}, el('span', {}, pill(a.area, a.sev), ' ', a.text)))) : el('div', { class: 'empty' }, 'Nothing needs attention'));
   }
 
@@ -827,8 +832,8 @@
     out.push(northStarCard(D, C));
     out.push(el('section', { class: 'grid two' }, actionsCard(D, C, 'leadership'), alertsCard(D, C, 'leadership')));
     out.push(el('section', { class: 'grid kpis' },
-      kpi(`Registrations · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`, n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of August pace' : 'no baseline'} · ${D.recorded} of ${D.workDays} days`, paceClass(t.pct)),
-      kpi('Projected month end', n0(Math.round(t.projection)), `${n1(t.perDay)}/day · August pace ${n0(Math.round(t.augPerDay * D.workDays))}`, t.projection >= t.augPerDay * D.workDays ? 'good' : 'bad'),
+      kpi(`Registrations · ${MONTHS_LONG[+D.month.slice(5, 7) - 1]}`, n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of baseline pace' : 'no baseline'} · ${D.recorded} of ${D.workDays} days`, paceClass(t.pct)),
+      kpi('Projected month end', n0(Math.round(t.projection)), `${n1(t.perDay)}/day · baseline pace ${n0(Math.round(t.augPerDay * D.workDays))}`, t.projection >= t.augPerDay * D.workDays ? 'good' : 'bad'),
       kpi('Debit orders on new sales', pct(t.m.do, t.m.reg), `${n0(t.m.do)} of ${n0(t.m.reg)} this month`),
       kpi('Upfront cash on new sales', randK(t.m.paid_amt), `${rand(t.m.paid_amt)} · ${n0(t.m.paid_n)} sales paid something upfront (${pct(t.m.paid_n, t.m.reg)})`),
       kpi(`Banked · cycle ${cycleLabel(CYCLE)}`, bankColl != null ? randK(bankColl + bankSales) : '–', bankColl != null ? `${randK(bankColl)} collections + ${randK(bankSales)} sales · to yesterday` : 'no bank data', bankMonth && bankMonth < CYCLE ? 'bad' : ''),
@@ -838,7 +843,7 @@
     if (S.leads) out.push(funnelStripCard(D, S.leads));
     const payL = paymentsCard(D, 'leadership'); if (payL) out.push(payL);
     // Charts: daily registrations stacked by college + August pace
-    const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = August pace');
+    const { card: c1, canvas: cv1 } = chartCard('Daily registrations by college', 'dashed line = baseline pace (active registrars)');
     const { card: c2, canvas: cv2 } = chartCard(goalMonth ? `Cash goal vs actual · cycle ${cycleLabel(goalMonth)}` : 'Cash goal vs actual', goalMonth ? goalNote(C.raw.goals[goalMonth], goalMonth, D) : '');
     out.push(el('section', { class: 'grid two' }, c1, c2));
 
@@ -850,9 +855,10 @@
       return el('div', { class: 'card' },
         el('div', { class: 'card-head' }, el('h2', {}, el('span', { class: 'dot ' + collegeClass(c.name) }), ' ', c.name), pill(c.pct != null ? Math.round(c.pct) + '% of pace' : 'no baseline', paceClass(c.pct))),
         el('div', { class: 'row spread' }, el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Month'), el('div', { class: 'value num' }, n0(c.m.reg))), el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Today'), el('div', { class: 'value num' }, n0(c.today))), el('div', { class: 'kpi' }, el('div', { class: 'label' }, 'Projected'), el('div', { class: 'value num' }, n0(Math.round(c.projection))))),
-        progress(c.m.reg, c.expected || c.m.reg, paceClass(c.pct)),
+        progress(c.baseReg, c.expected || c.m.reg, paceClass(c.pct)),
         el('ul', { class: 'list', style: 'margin-top:12px' },
-          el('li', {}, el('span', { class: 'muted' }, 'Expected at August pace'), el('span', { class: 'num' }, c.expected ? n0(Math.round(c.expected)) : '–')),
+          el('li', {}, el('span', { class: 'muted' }, 'Expected at baseline pace'), el('span', { class: 'num' }, c.expected ? n0(Math.round(c.expected)) : '–')),
+          el('li', {}, el('span', { class: 'muted' }, 'Sold by registrars with a baseline'), el('span', { class: 'num' }, n0(c.baseReg) + (c.firstMonthReg ? ` · +${n0(c.firstMonthReg)} first month` : ''))),
           el('li', {}, el('span', { class: 'muted' }, 'Debit-order rate'), el('span', { class: 'num' }, pct(c.m.do, c.m.reg))),
           el('li', {}, el('span', { class: 'muted' }, 'Upfront cash'), el('span', { class: 'num' }, `${rand(c.m.paid_amt)} · ${pct(c.m.paid_n, c.m.reg)}`)),
           el('li', {}, el('span', { class: 'muted' }, 'Under R700/month'), el('span', { class: 'num' }, pct(c.m.inst.lt400 + c.m.inst.b400_699, c.m.reg))),
@@ -873,7 +879,7 @@
     requestAnimationFrame(() => {
       chart(cv1, { type: 'bar', data: { labels: D.monthDays.map(dShort), datasets: [
         ...colleges.map(c => ({ label: c.name, data: c.series, backgroundColor: collegeColor(c.name), stack: 's', borderRadius: 2 })),
-        { type: 'line', label: 'August pace', data: D.monthDays.map(() => t.augPerDay), borderColor: '#f5b942', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
+        { type: 'line', label: 'Baseline pace', data: D.monthDays.map(() => t.augPerDay), borderColor: '#f5b942', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
       ] }, options: { maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } } });
       if (goalMonth) {
         const g = C.raw.goals[goalMonth];
@@ -897,6 +903,19 @@
     return out;
   }
 
+  // Roster changes: new starters and registrars with no sale for 30 days, each listed once with the day it was noticed.
+  function rosterChangesCard(D) {
+    const since = new Date(); since.setDate(since.getDate() - 30); const cut = ymd(since);
+    const ns = (D.raw.roster_notices || []).filter(n => n.issued >= cut).sort((a, b) => b.issued.localeCompare(a.issued) || a.type.localeCompare(b.type));
+    if (!ns.length) return null;
+    const rules = D.raw.roster_rules || {};
+    return el('section', {}, el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Roster changes'), el('span', { class: 'xs muted' }, 'from the sales sheets · last 30 days')),
+      el('ul', { class: 'list' }, ns.map(n => el('li', {}, el('span', {}, el('span', { class: 'dot ' + collegeClass(n.college) }), ' ', el('strong', {}, n.name), ' ',
+        el('span', { class: 'muted' }, n.type === 'new_starter' ? `new starter, first sale ${dShort(n.date)}: shows “first month” until a full month is on record` : `no sales for 30 days, last sale ${dShort(n.date)}: left out of expected`)),
+        pill(n.type === 'new_starter' ? 'new' : 'inactive', n.type === 'new_starter' ? 'good' : 'warn')))),
+      el('p', { class: 'note', style: 'margin:12px 0 0' }, `Roster = everyone who sold on the sales sheets. Active = a sale in the last ${rules.active_days || 30} days. Baseline = the August rate from the comparison sheet where it exists, otherwise the person's own last full month (${rules.previous_full_month ? monthLabel(rules.previous_full_month) : 'last month'}). Each change is listed once, on the day it is noticed.`)));
+  }
+
   function viewSalesManager(D, C) {
     const t = D.team; const out = [];
     const cur = C && C.cur ? C.perCycle[C.cur] : null;
@@ -905,20 +924,19 @@
     out.push(el('section', { class: 'grid kpis' },
       kpi('Today', n0(t.today), `${dDow(D.latest)} ${dShort(D.latest)} · yesterday ${n0(t.yesterday)}`),
       kpi('This week', n0(t.w.reg), `from Mon ${dShort(D.mondayIso)}`),
-      kpi('This month', n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of August pace' : ''} · projected ${n0(Math.round(t.projection))}`, paceClass(t.pct)),
+      kpi('This month', n0(t.m.reg), `${t.pct != null ? Math.round(t.pct) + '% of baseline pace' : ''} · projected ${n0(Math.round(t.projection))}`, paceClass(t.pct)),
       kpi('Debit-order rate', pct(t.m.do, t.m.reg), 'sales with a D/O mandate'),
       kpi('First payment within 7 days', pct(t.m.lead.le7, t.m.reg), `avg instalment ${rand(t.avgInst)}`),
-      kpi('Registrars selling', n0(people.filter(p => p.m.reg > 0).length), `${people.filter(p => p.unrostered && p.m.reg > 0).length} not on roster · ${D.people.filter(p => !p.active).length} inactive`),
+      kpi('Registrars selling', n0(people.filter(p => p.m.reg > 0).length), `${people.filter(p => p.firstMonth && p.m.reg > 0).length} in first month · ${D.people.filter(p => !p.active).length} inactive (30 days)`),
     ));
 
     // Attention list
     const attention = [];
     for (const p of people) {
       if (p.m.reg === 0) { attention.push([p, 'no sales this month' + (p.prevMonth ? ` (${p.prevMonth} last month)` : ''), 'bad']); continue; }
-      if (p.aug_per_day != null && p.pct != null && p.pct < 70) attention.push([p, `${Math.round(p.pct)}% of August pace`, 'bad']);
+      if (p.base != null && p.pct != null && p.pct < 70) attention.push([p, `${Math.round(p.pct)}% of baseline pace (${p.baseline_source === 'August' ? 'August' : 'own ' + monthLabel(p.baseline_source)})`, 'bad']);
       else if (p.lastTwo === 0 && p.m.reg > 0) attention.push([p, 'no sales in the last two recorded days', 'warn']);
       else if (p.m.reg >= 10 && p.doRate != null && t.doRate != null && p.doRate < t.doRate - 15) attention.push([p, `D/O rate ${Math.round(p.doRate)}% vs team ${Math.round(t.doRate)}%`, 'warn']);
-      if (p.unrostered && p.m.reg > 0) attention.push([p, 'selling but not on the comparison-sheet roster (no baseline, no incentive tracking)', 'warn']);
     }
     const attentionCard = el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Needs attention'), el('span', { class: 'xs muted' }, `${attention.length} flags`)),
       attention.length ? el('ul', { class: 'list' }, attention.sort((x, y) => (x[2] === 'bad' ? 0 : 1) - (y[2] === 'bad' ? 0 : 1)).slice(0, 12).map(([p, why, cls]) => el('li', {}, el('span', {}, el('span', { class: 'dot ' + collegeClass(p.college) }), ' ', el('strong', {}, p.name), ' ', el('span', { class: 'muted' }, why)), pill(n0(p.m.reg) + ' mtd', cls)))) : el('div', { class: 'empty' }, 'Nothing flagged'));
@@ -929,8 +947,9 @@
       el('p', { class: 'note', style: 'margin:12px 0 0' }, 'Lower monthly values have historically paid through better than higher ones.'),
       el('h3', { style: 'margin:16px 0 8px' }, 'First payment due'),
       mixBar(LEAD_KEYS.map(k => t.m.lead[k]), LEAD_LABELS, LEAD_COLORS));
-    const { card: trendCard, canvas: trendCv } = chartCard('Team registrations per day', 'this month · dashed = August pace');
+    const { card: trendCard, canvas: trendCv } = chartCard('Team registrations per day', 'this month · dashed = baseline pace');
     out.push(el('section', { class: 'grid three' }, actionsCard(D, C, 'sales'), alertsCard(D, C, 'sales'), attentionCard));
+    const rc = rosterChangesCard(D); if (rc) out.push(rc);
     out.push(el('section', { class: 'grid two' }, paretoCard(D, C), mixCard));
     out.push(testsCard(C, /mailer|sms|call|script|offer|price|deposit|landing|other|^$/i));
     out.push(el('section', { class: 'grid three' }, trendCard, incentiveExportCard(D), teamLinksCard(D)));
@@ -938,12 +957,12 @@
 
     // League table
     const cols = [
-      { key: 'name', label: 'Registrar', render: (v, r) => el('span', {}, el('span', { class: 'dot ' + collegeClass(r.college) }), ' ', v, r.unrostered ? el('span', { class: 'faint xs' }, ' · not on roster') : null) },
+      { key: 'name', label: 'Registrar', render: (v, r) => el('span', {}, el('span', { class: 'dot ' + collegeClass(r.college) }), ' ', v, r.firstMonth ? el('span', { class: 'faint xs' }, ' · first month') : null) },
       { key: 'today', label: 'Today', num: true },
       { key: 'yesterday', label: 'Yday', num: true },
       { key: 'week', label: 'Week', num: true },
       { key: 'month', label: 'Month', num: true, render: (v, r) => el('span', {}, el('span', { class: 'bar', style: `width:${Math.round(60 * v / Math.max(1, ...people.map(p => p.month)))}px` }), el('span', { class: 'num' }, n0(v))) },
-      { key: 'pct', label: 'vs Aug', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: paceClass(v) }, Math.round(v) + '%') },
+      { key: 'pct', label: 'vs base', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: paceClass(v) }, Math.round(v) + '%') },
       { key: 'projection', label: 'Proj.', num: true, fmt: v => n0(Math.round(v)) },
       { key: 'quality', label: 'Quality', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: qualityClass(v) }, n0(v)) },
       { key: 'expCash', label: '12-mo cash', num: true, fmt: v => randK(v) },
@@ -966,13 +985,13 @@
     const tableHost = el('div', {});
     redraw();
     out.push(el('section', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'League table'), el('div', { class: 'row' }, rankBy, filter)), tableHost,
-      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'vs Aug = this month against each registrar’s August daily rate × recorded days. Proj. = current daily rate carried to month end. Cancel req. = cancellation requests this cycle on sales attributed to the registrar. 12-mo cash = monthly instalments signed × 12 × (1 − cancellation rate this and last cycle, capped at 50%) + upfront cash: an estimate for ranking, not a forecast. D/O wk and Incentive come from the weekly incentive sheet. Quality (0–100, needs 10+ sales) = debit-order rate 35% + first payment within 7 days 25% + paid upfront 10% + cancellation index 30% (100 minus 10 per cancellation request per 100 sales over this and last month). Cancellation attribution uses the first name in the sheet, so shared first names (e.g. Christa) are merged.')));
+      el('p', { class: 'note', style: 'margin:12px 0 0' }, 'vs base = this month against each registrar’s baseline daily rate × recorded days: the August rate where it exists, otherwise their own last full month; new starters show “first month” until they have one. Registrars with no sale for 30 days are left out. Proj. = current daily rate carried to month end. Cancel req. = cancellation requests this cycle on sales attributed to the registrar. 12-mo cash = monthly instalments signed × 12 × (1 − cancellation rate this and last cycle, capped at 50%) + upfront cash: an estimate for ranking, not a forecast. D/O wk and Incentive come from the weekly incentive sheet. Quality (0–100, needs 10+ sales) = debit-order rate 35% + first payment within 7 days 25% + paid upfront 10% + cancellation index 30% (100 minus 10 per cancellation request per 100 sales over this and last month). Cancellation attribution uses the first name in the sheet, so shared first names (e.g. Christa) are merged.')));
     out.push(courseEconomics(D, C));
 
     requestAnimationFrame(() => {
       chart(trendCv, { type: 'bar', data: { labels: D.monthDays.map(dShort), datasets: [
         { label: 'Registrations', data: t.series, backgroundColor: '#f5b942', borderRadius: 3 },
-        { type: 'line', label: 'August pace', data: D.monthDays.map(() => t.augPerDay), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
+        { type: 'line', label: 'Baseline pace', data: D.monthDays.map(() => t.augPerDay), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 },
       ] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
     });
     if (S.leads) out.push(el('section', { class: 'grid two' }, speedCard(S.leads, 'registrar'), leadsPerSaleCard(S.leads)));
@@ -1006,7 +1025,7 @@
           el('div', {}, el('div', { class: 'xs muted' }, 'THIS MONTH'), el('div', { class: 'big num' }, n0(p.month))),
         ),
         el('div', { class: 'row', style: 'margin-top:14px' },
-          p.pct != null ? pill(`${Math.round(p.pct)}% of your August pace`, paceClass(p.pct)) : pill('no August baseline yet'),
+          p.pct != null ? pill(`${Math.round(p.pct)}% of your ${p.baseline_source === 'August' ? 'August' : monthLabel(p.baseline_source)} pace`, paceClass(p.pct)) : pill(p.status === 'inactive' ? 'no sales for 30 days' : 'first month: no baseline yet'),
           pill(`on track for ${n0(Math.round(p.projection))} this month`),
           p.streak >= 2 ? pill(`${p.streak}-day streak`, 'good') : null,
           p.today > 0 && p.today >= p.prevBest && p.prevBest > 0 ? pill('personal best today', 'good') : null,
@@ -1018,7 +1037,7 @@
         el('div', { class: 'ring-label' }, el('b', { class: 'num' }, n0(inc.debit_orders)), el('span', { class: 'xs muted' }, needed ? `of ${needed} D/Os` : 'D/Os this week'))) : el('div', { class: 'empty' }, 'Not on the incentive sheet'),
         inc ? el('div', { style: 'text-align:center;margin-top:10px' }, el('div', { class: 'small' }, needed ? `${inc.to_next_level} more debit order${inc.to_next_level === 1 ? '' : 's'} this week unlocks ${rand(inc.next_level_amount)}` : 'Top incentive level reached'), el('div', { class: 'xs muted' }, `Earned so far: ${rand(inc.total)} (${rand(inc.enrolment_incentive)} enrolment + ${rand(inc.cash_incentive)} cash)`)) : null)));
 
-    const { card: dayCard, canvas: dayCv } = chartCard('Your sales per day this month', 'dashed = your August pace');
+    const { card: dayCard, canvas: dayCv } = chartCard('Your sales per day this month', 'dashed = your baseline pace');
     const qualityCard = el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', {}, 'Sale quality this month'), el('span', { class: 'xs muted' }, 'you vs team')),
       el('ul', { class: 'list' }, [
         ['Debit-order mandate', p.doRate, t.doRate, '%'],
@@ -1033,7 +1052,7 @@
       el('ul', { class: 'list' },
         el('li', {}, el('span', { class: 'muted' }, 'Best single day'), el('span', { class: 'num' }, `${n0(p.best)}${p.bestDate ? ' · ' + dShort(p.bestDate) : ''}`)),
         el('li', {}, el('span', { class: 'muted' }, 'Last month'), el('span', { class: 'num' }, n0(p.prevMonth))),
-        el('li', {}, el('span', { class: 'muted' }, 'August daily rate'), el('span', { class: 'num' }, p.aug_per_day != null ? n1(p.aug_per_day) : '–')),
+        el('li', {}, el('span', { class: 'muted' }, 'Baseline per day' + (p.baseline_source ? ` (${p.baseline_source === 'August' ? 'August' : p.baseline_source === 'first month' ? 'first month' : monthLabel(p.baseline_source)})` : '')), el('span', { class: 'num' }, p.base != null ? n1(p.base) : '–')),
         el('li', {}, el('span', { class: 'muted' }, 'Your daily rate this month'), el('span', { class: 'num' }, n1(p.perDay))),
         el('li', {}, el('span', { class: 'muted' }, 'Upfront cash collected'), el('span', { class: 'num' }, rand(p.m.paid_amt))),
         el('li', {}, el('span', { class: 'muted' }, 'Cancellation requests on your sales (this cycle)'), el('span', { class: 'num ' + (myCancels && myCancels.total ? 'warn' : '') }, myCancels ? `${n0(myCancels.total)} · ${n0(myCancels.saved)} saved` : cur ? '0' : '–')),
@@ -1046,13 +1065,13 @@
       sortableTable([
         { key: 'name', label: 'Registrar', render: (v, r) => el('span', {}, el('span', { class: 'dot ' + collegeClass(r.college) }), ' ', v) },
         { key: 'today', label: 'Today', num: true }, { key: 'week', label: 'Week', num: true }, { key: 'month', label: 'Month', num: true },
-        { key: 'pct', label: 'vs Aug', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: paceClass(v) }, Math.round(v) + '%') },
+        { key: 'pct', label: 'vs base', num: true, render: v => v == null ? el('span', { class: 'faint' }, '–') : el('span', { class: paceClass(v) }, Math.round(v) + '%') },
       ], rows, 'month', { rank: true, highlight: r => r.key === p.key })));
 
     requestAnimationFrame(() => {
       chart(dayCv, { type: 'bar', data: { labels: D.monthDays.map(dShort), datasets: [
         { label: 'Sales', data: p.series, backgroundColor: p.series.map(v => v >= p.best && v > 0 ? '#4fc98a' : '#f5b942'), borderRadius: 3 },
-        p.aug_per_day != null ? { type: 'line', label: 'August pace', data: D.monthDays.map(() => p.aug_per_day), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 } : null,
+        p.base != null ? { type: 'line', label: 'Baseline pace', data: D.monthDays.map(() => p.base), borderColor: '#9aa5b1', borderDash: [6, 4], pointRadius: 0, borderWidth: 2 } : null,
       ].filter(Boolean) }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
     });
     return out;

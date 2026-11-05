@@ -30,6 +30,9 @@ COL_PAID, COL_DO, COL_STATUS = 10, 11, 12
 COL_FP_DATE, COL_FP_AMT, COL_PARGO = 13, 14, 17
 COL_COURSE = 7
 
+ACTIVE_DAYS = 30  # sold within this many calendar days = active; none = inactive (dropped from expected)
+EXCLUDED = {"clarenceb"}  # per the comparison report's Method tab
+
 ONCE_OFF_MIN = 3000.0  # a "1st Payment" above this is a once-off (full fee / large deposit), not a monthly instalment
 
 INSTALMENT_BANDS = [("lt400", 0, 400), ("b400_699", 400, 700), ("b700_1499", 700, 1500), ("ge1500", 1500, 10**9)]
@@ -286,13 +289,14 @@ def main():
                               "latest": max(days) if days else None}
 
     # 3. Merge into persistent history (fresh data wins; old days survive).
-    old, old_courses, old_colleges = {}, {}, {}
+    old, old_courses, old_colleges, prev_notices = {}, {}, {}, []
     if OUT.exists():
         try:
             prev = json.loads(OUT.read_text())
             old = prev.get("days", {})
             old_courses = prev.get("courses", {})
             old_colleges = {p["key"]: p["college"] for p in prev.get("roster", [])}
+            prev_notices = prev.get("roster_notices", [])
         except Exception as e:  # noqa: BLE001
             print(f"could not read previous sales.json: {e}", file=sys.stderr)
     days = {**old, **fresh_days}
@@ -300,20 +304,60 @@ def main():
     days = {d: v for d, v in days.items() if d <= base["latest_day"]}
     courses = {**old_courses, **fresh_courses}
 
-    # 4. Roster: v1 people carry college + August baseline + this week's incentive.
+    # 4. Roster, derived from the sales sheets themselves (no manual roster to maintain).
+    #    Active = sold in the last ACTIVE_DAYS calendar days. First sale inside that window = new starter.
+    #    No sale for ACTIVE_DAYS = inactive: dropped from expected and listed once as "inactive since".
+    #    Baseline per day: the comparison sheet's August rate where it exists; otherwise the person's own
+    #    previous full calendar month (they sold before it started) ÷ that month's recorded days; until
+    #    then "first month" (no baseline, no percentage).
+    latest_d = date.fromisoformat(base["latest_day"])
+    first_sale, last_sale, month_tot = {}, {}, {}
+    month_days = {}
+    for d in sorted(days):
+        month_days[d[:7]] = month_days.get(d[:7], 0) + 1
+        for k, r in days[d].items():
+            if (r.get("reg") or 0) > 0:
+                first_sale.setdefault(k, d)
+                last_sale[k] = d
+                month_tot[(k, d[:7])] = month_tot.get((k, d[:7]), 0) + r["reg"]
+    cur_month = base["month"]
+    cy, cm = int(cur_month[:4]), int(cur_month[5:])
+    prev_full = f"{cy - (cm == 1):04d}-{(cm - 2) % 12 + 1:02d}"
+    v1_people = {v1.norm(p["name"]): p for p in base["people"]}
+    inc_all = base.get("incentives_all") or {}
+    cutoff = (latest_d - timedelta(days=ACTIVE_DAYS)).isoformat()
     roster = []
-    for p in base["people"]:
-        roster.append({"name": p["name"], "key": v1.norm(p["name"]), "college": p["college"],
-                       "aug_per_day": p["aug_per_day"], "incentive": p["incentive"]})
-    known = {p["key"] for p in roster}
-    # Registrars that sell but are not on the comparison-sheet roster (new starters,
-    # spelling drift). They are added with the college of the sheet section they
-    # appear in and no August baseline, so their sales still count.
-    unrostered = sorted({k for d in days.values() for k in d} - known)
-    for k in unrostered:
-        college = sheet_college.get(k) or old_colleges.get(k) or "Unknown"
-        roster.append({"name": k.title(), "key": k, "college": college, "aug_per_day": None,
-                       "incentive": None, "unrostered": True})
+    for k in sorted(set(v1_people) | set(first_sale)):
+        if k in EXCLUDED:
+            continue
+        vp = v1_people.get(k)
+        fs, ls = first_sale.get(k), last_sale.get(k)
+        status = "inactive" if not ls or ls <= cutoff else ("new" if fs > cutoff else "active")
+        aug = vp["aug_per_day"] if vp and vp.get("aug_per_day") else None
+        if aug:
+            baseline, source = aug, "August"
+        elif fs and fs < f"{prev_full}-01" and month_days.get(prev_full):
+            baseline, source = round(month_tot.get((k, prev_full), 0) / month_days[prev_full], 3), prev_full
+        else:
+            baseline, source = None, "first month"
+        college = (vp or {}).get("college") or sheet_college.get(k) or old_colleges.get(k) or "Unknown"
+        roster.append({"name": vp["name"] if vp else k.title(), "key": k, "college": college,
+                       "aug_per_day": aug, "baseline_per_day": baseline, "baseline_source": source,
+                       "status": status, "first_sale": fs, "last_sale": ls,
+                       "on_comparison_sheet": bool(vp), "incentive": inc_all.get(k) or (vp or {}).get("incentive")})
+
+    # 5. One-off roster notices for the sales manager. Each is issued once (dated) and kept in history.
+    notices = list(prev_notices)
+    seen = {(n["type"], n["key"], n["date"]) for n in notices}
+    issued = datetime.now(timezone(timedelta(hours=2))).date().isoformat()
+    for p in roster:
+        if p["status"] == "new" and ("new_starter", p["key"], p["first_sale"]) not in seen:
+            notices.append({"type": "new_starter", "key": p["key"], "name": p["name"], "college": p["college"],
+                            "date": p["first_sale"], "issued": issued})
+        if p["status"] == "inactive" and p["last_sale"] and ("inactive", p["key"], p["last_sale"]) not in seen:
+            notices.append({"type": "inactive", "key": p["key"], "name": p["name"], "college": p["college"],
+                            "date": p["last_sale"], "issued": issued})
+    unrostered = sorted(p["key"] for p in roster if not p["on_comparison_sheet"])
 
     sast = timezone(timedelta(hours=2))
     payload = {
@@ -325,6 +369,8 @@ def main():
         "incentive_week_days": base["periods"]["week"]["days"],
         "roster": roster,
         "unrostered": unrostered,
+        "roster_notices": notices,
+        "roster_rules": {"active_days": ACTIVE_DAYS, "previous_full_month": prev_full},
         "days": dict(sorted(days.items())),
         "courses": dict(sorted(courses.items())),
         "course_months": rollup_courses(courses),
@@ -338,7 +384,7 @@ def main():
     }
     OUT.write_text(json.dumps(payload, separators=(",", ":"), default=str))
     print(f"wrote {OUT} ({OUT.stat().st_size} bytes, {len(days)} days, {len(roster)} on roster, "
-          f"{len(unrostered)} unrostered)", file=sys.stderr)
+          f"{len(unrostered)} not on comparison sheet, {len(notices)} roster notices)", file=sys.stderr)
     return payload
 
 

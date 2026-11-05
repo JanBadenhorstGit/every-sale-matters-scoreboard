@@ -412,8 +412,8 @@ def main():
     wb.close()
 
     incentives = {}
-    for p in roster:
-        k = norm(p["name"])
+    # everyone in the incentive sheet, not only comparison-roster names (new starters earn incentives too)
+    for k in sorted(roster_keys | set(do_counts) | set(cash_by_person)):
         n_do = do_counts.get(k, 0)
         cash = cash_by_person.get(k, 0.0)
         inc = {
@@ -460,6 +460,7 @@ def main():
         "month_recorded_days": month_days_n,
         "aug_recorded_days": AUG_RECORDED_DAYS,
         "people": people,
+        "incentives_all": incentives,
         "colleges": colleges,
         "periods": {p: {"recorded_days": v["recorded_days"], "days": v["days"]}
                     for p, v in periods.items()},

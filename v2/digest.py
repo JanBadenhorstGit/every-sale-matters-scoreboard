@@ -29,8 +29,12 @@ def main(sales, coll, leads=None):
     m_reg, m_do, m_paid_n, m_paid = tot(m_recs, 'reg'), tot(m_recs, 'do'), tot(m_recs, 'paid_n'), tot(m_recs, 'paid_amt') + tot(m_recs, 'once_due')
     t_reg, t_do = tot(t_recs, 'reg'), tot(t_recs, 'do')
     recorded = len(days)
-    aug_per_day = sum(p.get('aug_per_day') or 0 for p in S['roster'])
-    pace = 100 * (m_reg / recorded) / aug_per_day if recorded and aug_per_day else None
+    # baseline pace, like-for-like: active registrars with a baseline (August rate, else own last full month)
+    based = {p['key']: p['baseline_per_day'] for p in S['roster'] if p.get('status') != 'inactive' and p.get('baseline_per_day') is not None} if any('status' in p for p in S['roster']) else {p['key']: p['aug_per_day'] for p in S['roster'] if p.get('aug_per_day')}
+    aug_per_day = sum(based.values())
+    base_reg = sum(r['reg'] for d in days.values() for k, r in d.items() if k in based)
+    first_month_reg = sum(r['reg'] for d in days.values() for k, r in d.items() if k not in based and (people.get(k) or {}).get('status') in ('new', 'active'))
+    pace = 100 * (base_reg / recorded) / aug_per_day if recorded and aug_per_day else None
     by_col_t = collections.Counter(); by_col_m = collections.Counter()
     for k, r in today.items(): by_col_t[col[k]] += r['reg']
     for d in days.values():
@@ -90,7 +94,7 @@ def main(sales, coll, leads=None):
     # ---- attention (same rules as the board, abridged) ----
     alerts = []
     if S.get('config_stale'): alerts.append(f"RED  Registration data stops at {dl}: this month's sheets are not connected yet")
-    if pace is not None and pace < 80: alerts.append(f"{'RED ' if pace < 70 else 'AMBER'} Team at {pace:.0f}% of August pace")
+    if pace is not None and pace < 80: alerts.append(f"{'RED ' if pace < 70 else 'AMBER'} Team at {pace:.0f}% of baseline pace")
     if m_reg and 100 * m_do / m_reg < 85: alerts.append(f"AMBER Debit-order rate {100*m_do/m_reg:.0f}% this month")
     if unproc > 20: alerts.append(f"RED  {unproc} cancellation requests logged but not yet worked")
     ref = datetime.date.fromisoformat(latest)
@@ -128,8 +132,11 @@ def main(sales, coll, leads=None):
                 alerts.append(f"AMBER Goal tab shows R{lr['actual_cum']/1e3:.0f}k banked to {up_to.strftime('%-d %b')} but the bank tabs add up to R{bank_sum/1e3:.0f}k" + (f"; no bank rows for {', '.join(missing[:4])}" + (f" +{len(missing)-4}" if len(missing) > 4 else '') if missing else ''))
     for t in (C.get('sources', {}).get('bank', {}).get('copied_tabs') or []):
         alerts.append(f"RED  {t['college']} bank tab for {datetime.date(int(t['month'][:4]), int(t['month'][5:]), 1).strftime('%B')} repeats the {datetime.date(int(t['same_as'][:4]), int(t['same_as'][5:]), 1).strftime('%B')} figures (copied template?); ignored")
-    unrostered = [name(k) for k in m_by_p if people.get(k, {}).get('unrostered') and m_by_p[k] > 0]
-    if unrostered: alerts.append(f"AMBER {len(unrostered)} registrars selling but not on the comparison-sheet roster: {', '.join(sorted(unrostered))}")
+    # one-off roster notices (issued once by the sales pipeline; shown in the digests of that day only)
+    for n in S.get('roster_notices', []):
+        if n.get('issued') != sast_today.isoformat(): continue
+        nd = datetime.date.fromisoformat(n['date']).strftime('%-d %b')
+        alerts.append(f"NOTE  New starter: {n['name']} ({n['college']}), first sale {nd}" if n['type'] == 'new_starter' else f"NOTE  No sales for 30 days: {n['name']} ({n['college']}), last sale {nd}; left out of expected")
     # ---- today's three: actions ranked by estimated cash impact (students × avg instalment × 12 months) ----
     H = 12
     inst_sum = collections.Counter(); inst_n = collections.Counter()
@@ -174,7 +181,7 @@ def main(sales, coll, leads=None):
     L.append('')
     L.append('SALES')
     L.append(f"- {dl}: {t_reg} registrations ({t_do} with debit orders)" + (' · ' + ', '.join(f"{c} {n}" for c, n in by_col_t.most_common()) if by_col_t else ''))
-    L.append(f"- Month to date: {m_reg:,} registrations in {recorded} days" + (f" · {pace:.0f}% of August pace" if pace else '') + f" · D/O rate {100*m_do/m_reg:.0f}% · upfront cash R{m_paid:,.0f} on {m_paid_n} sales")
+    L.append(f"- Month to date: {m_reg:,} registrations in {recorded} days" + (f" · {pace:.0f}% of baseline pace" if pace else '') + f" · D/O rate {100*m_do/m_reg:.0f}% · upfront cash R{m_paid:,.0f} on {m_paid_n} sales")
     L.append('- By college this month: ' + ', '.join(f"{c} {n:,}" for c, n in by_col_m.most_common()))
     L.append('- Top today: ' + ', '.join(f"{name(k)} {r['reg']}" for k, r in top_t))
     if zero_today: L.append(f"- Active registrars with no sale {dl}: " + ', '.join(name(k) for k in zero_today))
