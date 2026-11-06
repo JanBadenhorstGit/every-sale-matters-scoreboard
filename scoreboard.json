@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-06T14:06:30",
+ "generated_at": "2026-11-06T20:31:08",
  "latest_day": "2026-11-06",
  "month": "2026-11",
  "config_stale": false,
@@ -263,7 +263,7 @@
     "enrolment_incentive": 400,
     "cash_collected": 0.0,
     "cash_incentive": 0,
-    "paid": false,
+    "paid": true,
     "total": 400,
     "next_level_at": 30,
     "next_level_amount": 550,
@@ -714,14 +714,14 @@
    "name": "Christa",
    "college": "Skills Academy",
    "aug_per_day": 3.45,
-   "today": 3,
+   "today": 2,
    "yesterday": 3,
-   "week": 7,
-   "month": 7,
+   "week": 6,
+   "month": 6,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 7,
+    "debit_orders": 6,
     "enrolment_incentive": 0,
     "cash_collected": 4630.0,
     "cash_incentive": 100,
@@ -729,7 +729,7 @@
     "total": 100,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 18
+    "to_next_level": 19
    }
   },
   {
@@ -768,7 +768,7 @@
    "to_next_level": 15
   },
   "christa": {
-   "debit_orders": 7,
+   "debit_orders": 6,
    "enrolment_incentive": 0,
    "cash_collected": 4630.0,
    "cash_incentive": 100,
@@ -776,7 +776,7 @@
    "total": 100,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 18
+   "to_next_level": 19
   },
   "christab": {
    "debit_orders": 0,
@@ -937,7 +937,7 @@
    "enrolment_incentive": 400,
    "cash_collected": 0.0,
    "cash_incentive": 0,
-   "paid": false,
+   "paid": true,
    "total": 400,
    "next_level_at": 30,
    "next_level_amount": 550,
@@ -1194,10 +1194,10 @@
    "pct": 53.324968632371395
   },
   "Skills Academy": {
-   "now": 191,
+   "now": 190,
    "expected": 302.59999999999997,
    "aug_per_day": 75.64999999999999,
-   "pct": 63.11962987442169
+   "pct": 62.789160608063455
   },
   "Matric College": {
    "now": 78,
