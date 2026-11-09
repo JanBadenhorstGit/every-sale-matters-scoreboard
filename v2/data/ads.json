@@ -1,5 +1,5 @@
 {
-"generated_at": "2026-11-06T05:50:15.000Z",
+"generated_at": "2026-11-09T05:50:08.000Z",
 "source": "PPC = Google Ads API campaign report (cost_micros/1e6, ZAR). Facebook = Meta Marketing API account-level amount_spent (ZAR). Matric College Facebook spend not available yet.",
 "accounts": {
 "PPC": {
@@ -525,7 +525,7 @@
 },
 "2026-11-01": {
 "PPC": {
-"cost": 3122,
+"cost": 3123,
 "clicks": 1635,
 "conv": 271
 },
@@ -535,9 +535,9 @@
 },
 "2026-11-02": {
 "PPC": {
-"cost": 4367,
+"cost": 4368,
 "clicks": 1674,
-"conv": 373
+"conv": 376
 },
 "Facebook": {
 "cost": 2787
@@ -559,7 +559,7 @@
 },
 "2026-11-03": {
 "PPC": {
-"cost": 4746,
+"cost": 4747,
 "clicks": 1730,
 "conv": 395
 },
@@ -569,9 +569,9 @@
 },
 "2026-11-04": {
 "PPC": {
-"cost": 4287,
-"clicks": 1867,
-"conv": 374
+"cost": 4289,
+"clicks": 1866,
+"conv": 386
 },
 "Facebook": {
 "cost": 2517
@@ -589,12 +589,32 @@
 },
 "2026-11-05": {
 "PPC": {
-"cost": 4910,
-"clicks": 1876,
-"conv": 371
+"cost": 4897,
+"clicks": 1866,
+"conv": 399
 },
 "Facebook": {
-"cost": 2491
+"cost": 2507
+}
+},
+"2026-11-06": {
+"PPC": {
+"cost": 3571,
+"clicks": 1499,
+"conv": 288
+},
+"Facebook": {
+"cost": 1553
+}
+},
+"2026-11-08": {
+"PPC": {
+"cost": 3227,
+"clicks": 1639,
+"conv": 230
+},
+"Facebook": {
+"cost": 1740
 }
 }
 },
@@ -1135,7 +1155,7 @@
 "PPC": {
 "cost": 8737,
 "clicks": 4466,
-"conv": 609
+"conv": 611
 },
 "Facebook": {
 "cost": 2021
@@ -1145,7 +1165,7 @@
 "PPC": {
 "cost": 8224,
 "clicks": 4223,
-"conv": 711
+"conv": 713
 },
 "Facebook": {
 "cost": 1911
@@ -1153,9 +1173,9 @@
 },
 "2026-11-04": {
 "PPC": {
-"cost": 7648,
-"clicks": 3705,
-"conv": 568
+"cost": 7584,
+"clicks": 3668,
+"conv": 600
 },
 "Facebook": {
 "cost": 1737
@@ -1173,12 +1193,32 @@
 },
 "2026-11-05": {
 "PPC": {
-"cost": 7830,
-"clicks": 4106,
-"conv": 544
+"cost": 7812,
+"clicks": 4099,
+"conv": 678
 },
 "Facebook": {
-"cost": 1821
+"cost": 1836
+}
+},
+"2026-11-06": {
+"PPC": {
+"cost": 3498,
+"clicks": 1132,
+"conv": 319
+},
+"Facebook": {
+"cost": 1022
+}
+},
+"2026-11-08": {
+"PPC": {
+"cost": 5845,
+"clicks": 4795,
+"conv": 395
+},
+"Facebook": {
+"cost": 603
 }
 }
 },
@@ -1705,7 +1745,7 @@
 "PPC": {
 "cost": 1613,
 "clicks": 479,
-"conv": 83
+"conv": 85
 },
 "Facebook": {
 "cost": 2347
@@ -1729,7 +1769,7 @@
 "PPC": {
 "cost": 1862,
 "clicks": 470,
-"conv": 86
+"conv": 88
 },
 "Facebook": {
 "cost": 2213
@@ -1737,9 +1777,9 @@
 },
 "2026-11-04": {
 "PPC": {
-"cost": 1143,
-"clicks": 354,
-"conv": 44
+"cost": 1142,
+"clicks": 352,
+"conv": 51
 },
 "Facebook": {
 "cost": 1995
@@ -1757,12 +1797,32 @@
 },
 "2026-11-05": {
 "PPC": {
-"cost": 1809,
-"clicks": 418,
-"conv": 85
+"cost": 1824,
+"clicks": 423,
+"conv": 89
 },
 "Facebook": {
-"cost": 2137
+"cost": 2156
+}
+},
+"2026-11-06": {
+"PPC": {
+"cost": 933,
+"clicks": 178,
+"conv": 36
+},
+"Facebook": {
+"cost": 1126
+}
+},
+"2026-11-08": {
+"PPC": {
+"cost": 743,
+"clicks": 172,
+"conv": 39
+},
+"Facebook": {
+"cost": 1453
 }
 }
 }
@@ -2406,9 +2466,9 @@
 "2026-11": {
 "Skills Academy": {
 "PPC": {
-"cost": 21432,
-"clicks": 8782,
-"conv": 1784,
+"cost": 28222,
+"clicks": 11909,
+"conv": 2345,
 "impressions": 84992,
 "campaigns": {
 "Beauty Courses 2026": {
@@ -2484,16 +2544,16 @@
 }
 },
 "Facebook": {
-"cost": 12586,
-"impressions": 944284,
-"clicks": 20170
+"cost": 16025,
+"impressions": 1204899,
+"clicks": 25907
 }
 },
 "Matric College": {
 "PPC": {
-"cost": 38147,
-"clicks": 20001,
-"conv": 2802,
+"cost": 47408,
+"clicks": 25884,
+"conv": 3686,
 "impressions": 278163,
 "campaigns": {
 "Matric Campaign 2026": {
@@ -2541,16 +2601,16 @@
 }
 },
 "Facebook": {
-"cost": 9151,
-"impressions": 737428,
-"clicks": 16424
+"cost": 10531,
+"impressions": 858687,
+"clicks": 19301
 }
 },
 "Bellview Inst.": {
 "PPC": {
-"cost": 6908,
-"clicks": 1872,
-"conv": 316,
+"cost": 8598,
+"clicks": 2225,
+"conv": 406,
 "impressions": 6085,
 "campaigns": {
 "Matric Upgrade Campaign 2026": {
@@ -2612,9 +2672,9 @@
 }
 },
 "Facebook": {
-"cost": 12613,
-"impressions": 538777,
-"clicks": 12391
+"cost": 15300,
+"impressions": 681048,
+"clicks": 15758
 }
 }
 }
