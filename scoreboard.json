@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-10T14:43:47",
+ "generated_at": "2026-11-10T21:15:38",
  "latest_day": "2026-11-10",
  "month": "2026-11",
  "config_stale": false,
@@ -296,11 +296,11 @@
    "name": "Debbie",
    "college": "Skills Academy",
    "aug_per_day": 2.8,
-   "today": 6,
+   "today": 7,
    "yesterday": 4,
-   "week": 10,
-   "month": 16,
-   "best_day": 6,
+   "week": 11,
+   "month": 17,
+   "best_day": 7,
    "prev_best": 6,
    "incentive": {
     "debit_orders": 5,
@@ -1194,10 +1194,10 @@
    "pct": 59.80761187787535
   },
   "Skills Academy": {
-   "now": 309,
+   "now": 310,
    "expected": 453.90000000000003,
    "aug_per_day": 75.64999999999999,
-   "pct": 68.07666886979511
+   "pct": 68.29698171403392
   },
   "Matric College": {
    "now": 125,
