@@ -1,9 +1,9 @@
 {
- "generated_at": "2026-11-10T21:15:38",
- "latest_day": "2026-11-10",
+ "generated_at": "2026-11-11T13:59:26",
+ "latest_day": "2026-11-11",
  "month": "2026-11",
  "config_stale": false,
- "month_recorded_days": 6,
+ "month_recorded_days": 7,
  "aug_recorded_days": 20,
  "people": [
   {
@@ -11,11 +11,33 @@
    "college": "Bellview Inst.",
    "aug_per_day": 2.45,
    "today": 4,
-   "yesterday": 3,
-   "week": 7,
-   "month": 27,
+   "yesterday": 4,
+   "week": 11,
+   "month": 31,
    "best_day": 8,
    "prev_best": 8,
+   "incentive": {
+    "debit_orders": 11,
+    "enrolment_incentive": 0,
+    "cash_collected": 0.0,
+    "cash_incentive": 0,
+    "paid": false,
+    "total": 0,
+    "next_level_at": 25,
+    "next_level_amount": 400,
+    "to_next_level": 14
+   }
+  },
+  {
+   "name": "Lesego",
+   "college": "Bellview Inst.",
+   "aug_per_day": 1.6,
+   "today": 5,
+   "yesterday": 1,
+   "week": 7,
+   "month": 10,
+   "best_day": 6,
+   "prev_best": 6,
    "incentive": {
     "debit_orders": 7,
     "enrolment_incentive": 0,
@@ -29,39 +51,17 @@
    }
   },
   {
-   "name": "Lesego",
-   "college": "Bellview Inst.",
-   "aug_per_day": 1.6,
-   "today": 1,
-   "yesterday": 1,
-   "week": 2,
-   "month": 5,
-   "best_day": 6,
-   "prev_best": 6,
-   "incentive": {
-    "debit_orders": 2,
-    "enrolment_incentive": 0,
-    "cash_collected": 0.0,
-    "cash_incentive": 0,
-    "paid": false,
-    "total": 0,
-    "next_level_at": 25,
-    "next_level_amount": 400,
-    "to_next_level": 23
-   }
-  },
-  {
    "name": "Andre",
    "college": "Skills Academy",
    "aug_per_day": 2.6,
-   "today": 1,
-   "yesterday": 3,
-   "week": 4,
-   "month": 15,
+   "today": 3,
+   "yesterday": 1,
+   "week": 7,
+   "month": 18,
    "best_day": 19,
    "prev_best": 19,
    "incentive": {
-    "debit_orders": 3,
+    "debit_orders": 6,
     "enrolment_incentive": 0,
     "cash_collected": 6760.0,
     "cash_incentive": 150,
@@ -69,7 +69,7 @@
     "total": 150,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 22
+    "to_next_level": 19
    }
   },
   {
@@ -98,14 +98,14 @@
    "name": "Natasha",
    "college": "Matric College",
    "aug_per_day": 4.15,
-   "today": 0,
-   "yesterday": 6,
-   "week": 6,
-   "month": 27,
+   "today": 8,
+   "yesterday": 0,
+   "week": 14,
+   "month": 35,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 6,
+    "debit_orders": 14,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -113,14 +113,14 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 19
+    "to_next_level": 11
    }
   },
   {
    "name": "Leigh",
    "college": "Skills Academy",
    "aug_per_day": 1.65,
-   "today": 2,
+   "today": 0,
    "yesterday": 2,
    "week": 4,
    "month": 6,
@@ -142,14 +142,14 @@
    "name": "Prince",
    "college": "Skills Academy",
    "aug_per_day": 3.9,
-   "today": 2,
-   "yesterday": 4,
-   "week": 6,
-   "month": 14,
+   "today": 1,
+   "yesterday": 2,
+   "week": 7,
+   "month": 15,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 6,
+    "debit_orders": 7,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -157,7 +157,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 19
+    "to_next_level": 18
    }
   },
   {
@@ -186,22 +186,22 @@
    "name": "Liza",
    "college": "Skills Academy",
    "aug_per_day": 6.5,
-   "today": 8,
-   "yesterday": 9,
-   "week": 17,
-   "month": 39,
+   "today": 9,
+   "yesterday": 8,
+   "week": 26,
+   "month": 48,
    "best_day": 14,
    "prev_best": 14,
    "incentive": {
-    "debit_orders": 17,
-    "enrolment_incentive": 0,
+    "debit_orders": 26,
+    "enrolment_incentive": 400,
     "cash_collected": 0.0,
     "cash_incentive": 0,
     "paid": false,
-    "total": 0,
-    "next_level_at": 25,
-    "next_level_amount": 400,
-    "to_next_level": 8
+    "total": 400,
+    "next_level_at": 30,
+    "next_level_amount": 550,
+    "to_next_level": 4
    }
   },
   {
@@ -210,12 +210,12 @@
    "aug_per_day": 4.5,
    "today": 3,
    "yesterday": 3,
-   "week": 6,
-   "month": 13,
+   "week": 9,
+   "month": 16,
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 6,
+    "debit_orders": 8,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -223,21 +223,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 19
+    "to_next_level": 17
    }
   },
   {
    "name": "Tanya",
    "college": "Bellview Inst.",
    "aug_per_day": 6.1,
-   "today": 8,
-   "yesterday": 3,
-   "week": 11,
-   "month": 21,
+   "today": 2,
+   "yesterday": 8,
+   "week": 13,
+   "month": 23,
    "best_day": 15,
    "prev_best": 15,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 13,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -245,21 +245,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 12
    }
   },
   {
    "name": "Kenneth",
    "college": "Skills Academy",
    "aug_per_day": 8.35,
-   "today": 7,
-   "yesterday": 4,
-   "week": 11,
-   "month": 41,
+   "today": 6,
+   "yesterday": 7,
+   "week": 17,
+   "month": 47,
    "best_day": 13,
    "prev_best": 13,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 16,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -267,21 +267,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 9
    }
   },
   {
    "name": "Mpho",
    "college": "Bellview Inst.",
    "aug_per_day": 4.45,
-   "today": 2,
-   "yesterday": 5,
-   "week": 7,
-   "month": 16,
-   "best_day": 10,
+   "today": 11,
+   "yesterday": 2,
+   "week": 18,
+   "month": 27,
+   "best_day": 11,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 7,
+    "debit_orders": 9,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -289,21 +289,21 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 18
+    "to_next_level": 16
    }
   },
   {
    "name": "Debbie",
    "college": "Skills Academy",
    "aug_per_day": 2.8,
-   "today": 7,
-   "yesterday": 4,
-   "week": 11,
-   "month": 17,
+   "today": 3,
+   "yesterday": 7,
+   "week": 14,
+   "month": 20,
    "best_day": 7,
-   "prev_best": 6,
+   "prev_best": 7,
    "incentive": {
-    "debit_orders": 5,
+    "debit_orders": 7,
     "enrolment_incentive": 0,
     "cash_collected": 12149.0,
     "cash_incentive": 300,
@@ -311,21 +311,21 @@
     "total": 300,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 20
+    "to_next_level": 18
    }
   },
   {
    "name": "Pheletso",
    "college": "Skills Academy",
    "aug_per_day": 4.95,
-   "today": 5,
-   "yesterday": 0,
-   "week": 5,
-   "month": 9,
+   "today": 4,
+   "yesterday": 5,
+   "week": 9,
+   "month": 13,
    "best_day": 9,
    "prev_best": 9,
    "incentive": {
-    "debit_orders": 5,
+    "debit_orders": 9,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -333,7 +333,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 20
+    "to_next_level": 16
    }
   },
   {
@@ -362,14 +362,14 @@
    "name": "Clarence",
    "college": "Skills Academy",
    "aug_per_day": 8.15,
-   "today": 6,
-   "yesterday": 2,
-   "week": 8,
-   "month": 23,
+   "today": 4,
+   "yesterday": 6,
+   "week": 12,
+   "month": 27,
    "best_day": 15,
    "prev_best": 15,
    "incentive": {
-    "debit_orders": 7,
+    "debit_orders": 10,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -377,7 +377,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 18
+    "to_next_level": 15
    }
   },
   {
@@ -406,14 +406,14 @@
    "name": "Clauday",
    "college": "Matric College",
    "aug_per_day": 6.2,
-   "today": 2,
-   "yesterday": 4,
-   "week": 6,
-   "month": 20,
+   "today": 9,
+   "yesterday": 2,
+   "week": 15,
+   "month": 29,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 4,
+    "debit_orders": 13,
     "enrolment_incentive": 0,
     "cash_collected": 4630.0,
     "cash_incentive": 100,
@@ -421,21 +421,21 @@
     "total": 100,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 21
+    "to_next_level": 12
    }
   },
   {
    "name": "Palesa",
    "college": "Matric College",
    "aug_per_day": 5.3,
-   "today": 6,
-   "yesterday": 7,
-   "week": 13,
-   "month": 33,
+   "today": 8,
+   "yesterday": 6,
+   "week": 21,
+   "month": 41,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 13,
+    "debit_orders": 20,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -443,7 +443,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 12
+    "to_next_level": 5
    }
   },
   {
@@ -472,8 +472,8 @@
    "name": "Willem",
    "college": "Skills Academy",
    "aug_per_day": 2.4,
-   "today": 2,
-   "yesterday": 1,
+   "today": 0,
+   "yesterday": 2,
    "week": 3,
    "month": 9,
    "best_day": 4,
@@ -496,12 +496,12 @@
    "aug_per_day": 5.2,
    "today": 5,
    "yesterday": 5,
-   "week": 10,
-   "month": 30,
+   "week": 15,
+   "month": 35,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 10,
+    "debit_orders": 15,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -509,7 +509,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 15
+    "to_next_level": 10
    }
   },
   {
@@ -518,12 +518,12 @@
    "aug_per_day": 6.05,
    "today": 7,
    "yesterday": 7,
-   "week": 14,
-   "month": 40,
+   "week": 21,
+   "month": 47,
    "best_day": 12,
    "prev_best": 12,
    "incentive": {
-    "debit_orders": 14,
+    "debit_orders": 21,
     "enrolment_incentive": 0,
     "cash_collected": 2800.0,
     "cash_incentive": 100,
@@ -531,15 +531,15 @@
     "total": 100,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 11
+    "to_next_level": 4
    }
   },
   {
    "name": "Vinolia",
    "college": "Skills Academy",
    "aug_per_day": 5.05,
-   "today": 5,
-   "yesterday": 0,
+   "today": 0,
+   "yesterday": 5,
    "week": 5,
    "month": 14,
    "best_day": 13,
@@ -561,13 +561,13 @@
    "college": "Skills Academy",
    "aug_per_day": 6.5,
    "today": 7,
-   "yesterday": 5,
-   "week": 12,
-   "month": 32,
+   "yesterday": 7,
+   "week": 19,
+   "month": 39,
    "best_day": 11,
    "prev_best": 11,
    "incentive": {
-    "debit_orders": 12,
+    "debit_orders": 19,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -575,19 +575,41 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 13
+    "to_next_level": 6
    }
   },
   {
    "name": "Lindiwe",
    "college": "Matric College",
    "aug_per_day": 8.15,
-   "today": 7,
-   "yesterday": 10,
-   "week": 17,
-   "month": 38,
+   "today": 12,
+   "yesterday": 7,
+   "week": 29,
+   "month": 50,
    "best_day": 13,
    "prev_best": 13,
+   "incentive": {
+    "debit_orders": 28,
+    "enrolment_incentive": 400,
+    "cash_collected": 1744.0,
+    "cash_incentive": 50,
+    "paid": false,
+    "total": 450,
+    "next_level_at": 30,
+    "next_level_amount": 550,
+    "to_next_level": 2
+   }
+  },
+  {
+   "name": "Eno",
+   "college": "Bellview Inst.",
+   "aug_per_day": 3.65,
+   "today": 2,
+   "yesterday": 8,
+   "week": 17,
+   "month": 26,
+   "best_day": 8,
+   "prev_best": 8,
    "incentive": {
     "debit_orders": 17,
     "enrolment_incentive": 0,
@@ -601,39 +623,17 @@
    }
   },
   {
-   "name": "Eno",
-   "college": "Bellview Inst.",
-   "aug_per_day": 3.65,
-   "today": 8,
-   "yesterday": 7,
-   "week": 15,
-   "month": 24,
-   "best_day": 8,
-   "prev_best": 8,
-   "incentive": {
-    "debit_orders": 15,
-    "enrolment_incentive": 0,
-    "cash_collected": 0.0,
-    "cash_incentive": 0,
-    "paid": false,
-    "total": 0,
-    "next_level_at": 25,
-    "next_level_amount": 400,
-    "to_next_level": 10
-   }
-  },
-  {
    "name": "Hulda",
    "college": "Matric College",
    "aug_per_day": 2.95,
-   "today": 2,
-   "yesterday": 3,
-   "week": 5,
-   "month": 7,
+   "today": 3,
+   "yesterday": 2,
+   "week": 8,
+   "month": 10,
    "best_day": 7,
    "prev_best": 7,
    "incentive": {
-    "debit_orders": 2,
+    "debit_orders": 4,
     "enrolment_incentive": 0,
     "cash_collected": 6951.0,
     "cash_incentive": 150,
@@ -641,21 +641,21 @@
     "total": 150,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 23
+    "to_next_level": 21
    }
   },
   {
    "name": "Ntase",
    "college": "Skills Academy",
    "aug_per_day": 8.2,
-   "today": 4,
-   "yesterday": 7,
-   "week": 11,
-   "month": 36,
+   "today": 3,
+   "yesterday": 4,
+   "week": 14,
+   "month": 39,
    "best_day": 16,
    "prev_best": 16,
    "incentive": {
-    "debit_orders": 11,
+    "debit_orders": 14,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -663,7 +663,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 14
+    "to_next_level": 11
    }
   },
   {
@@ -714,14 +714,14 @@
    "name": "Christa",
    "college": "Skills Academy",
    "aug_per_day": 3.45,
-   "today": 1,
-   "yesterday": 8,
-   "week": 9,
-   "month": 15,
+   "today": 2,
+   "yesterday": 1,
+   "week": 11,
+   "month": 17,
    "best_day": 10,
    "prev_best": 10,
    "incentive": {
-    "debit_orders": 7,
+    "debit_orders": 9,
     "enrolment_incentive": 0,
     "cash_collected": 9298.0,
     "cash_incentive": 300,
@@ -729,7 +729,7 @@
     "total": 300,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 18
+    "to_next_level": 16
    }
   },
   {
@@ -757,7 +757,7 @@
  ],
  "incentives_all": {
   "andre": {
-   "debit_orders": 3,
+   "debit_orders": 6,
    "enrolment_incentive": 0,
    "cash_collected": 6760.0,
    "cash_incentive": 150,
@@ -765,10 +765,10 @@
    "total": 150,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 22
+   "to_next_level": 19
   },
   "christa": {
-   "debit_orders": 7,
+   "debit_orders": 9,
    "enrolment_incentive": 0,
    "cash_collected": 9298.0,
    "cash_incentive": 300,
@@ -776,7 +776,7 @@
    "total": 300,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 18
+   "to_next_level": 16
   },
   "christab": {
    "debit_orders": 0,
@@ -790,7 +790,7 @@
    "to_next_level": 25
   },
   "christam": {
-   "debit_orders": 1,
+   "debit_orders": 3,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -798,10 +798,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 24
+   "to_next_level": 22
   },
   "christinah": {
-   "debit_orders": 6,
+   "debit_orders": 8,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -809,10 +809,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 19
+   "to_next_level": 17
   },
   "clarence": {
-   "debit_orders": 7,
+   "debit_orders": 10,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -820,10 +820,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 18
+   "to_next_level": 15
   },
   "clauday": {
-   "debit_orders": 4,
+   "debit_orders": 13,
    "enrolment_incentive": 0,
    "cash_collected": 4630.0,
    "cash_incentive": 100,
@@ -831,10 +831,10 @@
    "total": 100,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 21
+   "to_next_level": 12
   },
   "debbie": {
-   "debit_orders": 5,
+   "debit_orders": 7,
    "enrolment_incentive": 0,
    "cash_collected": 12149.0,
    "cash_incentive": 300,
@@ -842,21 +842,10 @@
    "total": 300,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 20
-  },
-  "duduzile": {
-   "debit_orders": 7,
-   "enrolment_incentive": 0,
-   "cash_collected": 0.0,
-   "cash_incentive": 0,
-   "paid": false,
-   "total": 0,
-   "next_level_at": 25,
-   "next_level_amount": 400,
    "to_next_level": 18
   },
-  "eno": {
-   "debit_orders": 15,
+  "duduzile": {
+   "debit_orders": 11,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -864,7 +853,18 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 10
+   "to_next_level": 14
+  },
+  "eno": {
+   "debit_orders": 17,
+   "enrolment_incentive": 0,
+   "cash_collected": 0.0,
+   "cash_incentive": 0,
+   "paid": false,
+   "total": 0,
+   "next_level_at": 25,
+   "next_level_amount": 400,
+   "to_next_level": 8
   },
   "fezekisiwe": {
    "debit_orders": 0,
@@ -889,7 +889,7 @@
    "to_next_level": 25
   },
   "grace": {
-   "debit_orders": 14,
+   "debit_orders": 21,
    "enrolment_incentive": 0,
    "cash_collected": 2800.0,
    "cash_incentive": 100,
@@ -897,10 +897,10 @@
    "total": 100,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 11
+   "to_next_level": 4
   },
   "henry": {
-   "debit_orders": 1,
+   "debit_orders": 3,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -908,10 +908,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 24
+   "to_next_level": 22
   },
   "hulda": {
-   "debit_orders": 2,
+   "debit_orders": 4,
    "enrolment_incentive": 0,
    "cash_collected": 6951.0,
    "cash_incentive": 150,
@@ -919,7 +919,7 @@
    "total": 150,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 23
+   "to_next_level": 21
   },
   "keeletse": {
    "debit_orders": 0,
@@ -933,7 +933,7 @@
    "to_next_level": 25
   },
   "kenneth": {
-   "debit_orders": 11,
+   "debit_orders": 16,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -941,7 +941,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 14
+   "to_next_level": 9
   },
   "leigh": {
    "debit_orders": 2,
@@ -966,7 +966,7 @@
    "to_next_level": 25
   },
   "lesego": {
-   "debit_orders": 2,
+   "debit_orders": 7,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -974,29 +974,29 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 23
+   "to_next_level": 18
   },
   "lindiwe": {
-   "debit_orders": 17,
-   "enrolment_incentive": 0,
-   "cash_collected": 0.0,
-   "cash_incentive": 0,
+   "debit_orders": 28,
+   "enrolment_incentive": 400,
+   "cash_collected": 1744.0,
+   "cash_incentive": 50,
    "paid": false,
-   "total": 0,
-   "next_level_at": 25,
-   "next_level_amount": 400,
-   "to_next_level": 8
+   "total": 450,
+   "next_level_at": 30,
+   "next_level_amount": 550,
+   "to_next_level": 2
   },
   "liza": {
-   "debit_orders": 17,
-   "enrolment_incentive": 0,
+   "debit_orders": 26,
+   "enrolment_incentive": 400,
    "cash_collected": 0.0,
    "cash_incentive": 0,
    "paid": false,
-   "total": 0,
-   "next_level_at": 25,
-   "next_level_amount": 400,
-   "to_next_level": 8
+   "total": 400,
+   "next_level_at": 30,
+   "next_level_amount": 550,
+   "to_next_level": 4
   },
   "mary": {
    "debit_orders": 0,
@@ -1010,7 +1010,7 @@
    "to_next_level": 25
   },
   "mpho": {
-   "debit_orders": 7,
+   "debit_orders": 9,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1018,10 +1018,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 18
+   "to_next_level": 16
   },
   "nadia": {
-   "debit_orders": 8,
+   "debit_orders": 10,
    "enrolment_incentive": 0,
    "cash_collected": 7230.0,
    "cash_incentive": 200,
@@ -1029,10 +1029,10 @@
    "total": 200,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 17
+   "to_next_level": 15
   },
   "natasha": {
-   "debit_orders": 6,
+   "debit_orders": 14,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1040,7 +1040,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 19
+   "to_next_level": 11
   },
   "nomfundo": {
    "debit_orders": 0,
@@ -1054,7 +1054,7 @@
    "to_next_level": 25
   },
   "nompumelelo": {
-   "debit_orders": 10,
+   "debit_orders": 15,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1062,10 +1062,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 15
+   "to_next_level": 10
   },
   "ntase": {
-   "debit_orders": 11,
+   "debit_orders": 14,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1073,10 +1073,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 14
+   "to_next_level": 11
   },
   "nthabiseng": {
-   "debit_orders": 12,
+   "debit_orders": 19,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1084,10 +1084,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 13
+   "to_next_level": 6
   },
   "palesa": {
-   "debit_orders": 13,
+   "debit_orders": 20,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1095,10 +1095,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 12
+   "to_next_level": 5
   },
   "pheletso": {
-   "debit_orders": 5,
+   "debit_orders": 9,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1106,10 +1106,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 20
+   "to_next_level": 16
   },
   "prince": {
-   "debit_orders": 6,
+   "debit_orders": 7,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1117,7 +1117,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 19
+   "to_next_level": 18
   },
   "priscilla": {
    "debit_orders": 0,
@@ -1131,7 +1131,7 @@
    "to_next_level": 25
   },
   "roxanne": {
-   "debit_orders": 3,
+   "debit_orders": 5,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1139,10 +1139,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 22
+   "to_next_level": 20
   },
   "tanya": {
-   "debit_orders": 11,
+   "debit_orders": 13,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1150,10 +1150,10 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 14
+   "to_next_level": 12
   },
   "thembeka": {
-   "debit_orders": 6,
+   "debit_orders": 14,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1161,7 +1161,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 19
+   "to_next_level": 11
   },
   "vinolia": {
    "debit_orders": 5,
@@ -1188,53 +1188,55 @@
  },
  "colleges": {
   "Bellview Inst.": {
-   "now": 143,
-   "expected": 239.10000000000002,
+   "now": 175,
+   "expected": 278.95000000000005,
    "aug_per_day": 39.85,
-   "pct": 59.80761187787535
+   "pct": 62.73525721455457
   },
   "Skills Academy": {
-   "now": 310,
-   "expected": 453.90000000000003,
+   "now": 359,
+   "expected": 529.5500000000001,
    "aug_per_day": 75.64999999999999,
-   "pct": 68.29698171403392
+   "pct": 67.79340949863091
   },
   "Matric College": {
-   "now": 125,
-   "expected": 245.1,
+   "now": 165,
+   "expected": 285.95,
    "aug_per_day": 40.85000000000001,
-   "pct": 50.99959200326397
+   "pct": 57.70239552369295
   }
  },
  "periods": {
   "today": {
    "recorded_days": 1,
    "days": [
-    "2026-11-10"
+    "2026-11-11"
    ]
   },
   "yesterday": {
    "recorded_days": 1,
    "days": [
-    "2026-11-09"
-   ]
-  },
-  "week": {
-   "recorded_days": 2,
-   "days": [
-    "2026-11-09",
     "2026-11-10"
    ]
   },
+  "week": {
+   "recorded_days": 3,
+   "days": [
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11"
+   ]
+  },
   "month": {
-   "recorded_days": 6,
+   "recorded_days": 7,
    "days": [
     "2026-11-02",
     "2026-11-03",
     "2026-11-05",
     "2026-11-06",
     "2026-11-09",
-    "2026-11-10"
+    "2026-11-10",
+    "2026-11-11"
    ]
   }
  }
