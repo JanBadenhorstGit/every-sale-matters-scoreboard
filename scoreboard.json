@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-12T15:00:02",
+ "generated_at": "2026-11-12T21:49:30",
  "latest_day": "2026-11-12",
  "month": "2026-11",
  "config_stale": false,
@@ -127,7 +127,7 @@
    "best_day": 4,
    "prev_best": 4,
    "incentive": {
-    "debit_orders": 5,
+    "debit_orders": 4,
     "enrolment_incentive": 0,
     "cash_collected": 12400.0,
     "cash_incentive": 300,
@@ -135,7 +135,7 @@
     "total": 300,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 20
+    "to_next_level": 21
    }
   },
   {
@@ -215,7 +215,7 @@
    "best_day": 8,
    "prev_best": 8,
    "incentive": {
-    "debit_orders": 13,
+    "debit_orders": 12,
     "enrolment_incentive": 0,
     "cash_collected": 0.0,
     "cash_incentive": 0,
@@ -223,7 +223,7 @@
     "total": 0,
     "next_level_at": 25,
     "next_level_amount": 400,
-    "to_next_level": 12
+    "to_next_level": 13
    }
   },
   {
@@ -801,7 +801,7 @@
    "to_next_level": 21
   },
   "christinah": {
-   "debit_orders": 13,
+   "debit_orders": 12,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -809,7 +809,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 12
+   "to_next_level": 13
   },
   "clarence": {
    "debit_orders": 19,
@@ -944,7 +944,7 @@
    "to_next_level": 1
   },
   "leigh": {
-   "debit_orders": 5,
+   "debit_orders": 4,
    "enrolment_incentive": 0,
    "cash_collected": 12400.0,
    "cash_incentive": 300,
@@ -952,7 +952,7 @@
    "total": 300,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 20
+   "to_next_level": 21
   },
   "leoto": {
    "debit_orders": 0,
@@ -1131,7 +1131,7 @@
    "to_next_level": 25
   },
   "roxanne": {
-   "debit_orders": 13,
+   "debit_orders": 12,
    "enrolment_incentive": 0,
    "cash_collected": 0.0,
    "cash_incentive": 0,
@@ -1139,7 +1139,7 @@
    "total": 0,
    "next_level_at": 25,
    "next_level_amount": 400,
-   "to_next_level": 12
+   "to_next_level": 13
   },
   "tanya": {
    "debit_orders": 19,
